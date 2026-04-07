@@ -1861,6 +1861,7 @@ dependencies = [
 [[package]]
 name = "llama-cpp-2"
 version = "0.1.139"
+source = "git+https://github.com/AsbjornOlling/llama-cpp-rs?branch=fix-android-static-link-libstdcxx-for-mtmd#fd4026fe239e82e3b74b747353f620937d776340"
 dependencies = [
  "encoding_rs",
  "enumflags2",
@@ -1873,6 +1874,7 @@ dependencies = [
 [[package]]
 name = "llama-cpp-sys-2"
 version = "0.1.139"
+source = "git+https://github.com/AsbjornOlling/llama-cpp-rs?branch=fix-android-static-link-libstdcxx-for-mtmd#fd4026fe239e82e3b74b747353f620937d776340"
 dependencies = [
  "bindgen",
  "cc",
@@ -2092,6 +2094,15 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "nobodywho-swift-bindgen"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "uniffi",
+ "uniffi_bindgen",
 ]
 
 [[package]]

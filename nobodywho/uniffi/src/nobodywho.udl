@@ -2,7 +2,7 @@ namespace nobodywho {
     void init_logging();
 
     [Throws=NobodyWhoError]
-    Model load_model(string path, boolean use_gpu);
+    Model load_model(string path, boolean use_gpu, string? mmproj_path);
 
     [Throws=NobodyWhoError]
     Encoder load_encoder(string path, boolean use_gpu, u32 context_size);
@@ -55,6 +55,14 @@ interface Message {
 // Opaque handle to a loaded model. Cheap to clone (Arc<LlamaModel> inside).
 interface Model {};
 
+// Multimodal prompt: a sequence of text and image parts.
+// Use push_text() and push_image() to build up the prompt, then pass to Chat.ask_with_prompt().
+interface Prompt {
+    constructor();
+    void push_text(string text);
+    void push_image(string path);
+};
+
 dictionary ChatConfig {
     u32 context_size;
     string? system_prompt;
@@ -74,6 +82,7 @@ interface Chat {
     constructor(Model model, ChatConfig config);
 
     TokenStream ask(string prompt);
+    TokenStream ask_with_prompt(Prompt prompt);
 
     [Throws=NobodyWhoError]
     sequence<Message> history();

@@ -1,4 +1,5 @@
 use nobodywho::chat::{ChatBuilder, ChatHandle, Message as CoreMessage, Role as CoreRole};
+use nobodywho::tokenizer::Prompt as CorePrompt;
 use nobodywho::crossencoder::CrossEncoder as CoreCrossEncoder;
 use nobodywho::embedder::Embedder as CoreEmbedder;
 use nobodywho::encoder::Encoder as CoreEncoder;
@@ -161,11 +162,45 @@ pub struct Model {
     pub(crate) inner: Arc<nobodywho::llm::Model>,
 }
 
-pub fn load_model(path: String, use_gpu: bool) -> Result<Arc<Model>, NobodyWhoError> {
-    let inner = llm::get_model(&path, use_gpu, None)?;
+pub fn load_model(
+    path: String,
+    use_gpu: bool,
+    mmproj_path: Option<String>,
+) -> Result<Arc<Model>, NobodyWhoError> {
+    let inner = llm::get_model(&path, use_gpu, mmproj_path.as_deref())?;
     Ok(Arc::new(Model {
         inner: Arc::new(inner),
     }))
+}
+
+// ---
+// Prompt
+//
+// A multimodal prompt consisting of text and image parts.
+// Images are referenced by file path and loaded when ask_with_prompt() is called.
+// ---
+
+pub struct Prompt {
+    inner: Mutex<CorePrompt>,
+}
+
+impl Prompt {
+    pub fn new() -> Self {
+        Self {
+            inner: Mutex::new(CorePrompt::new()),
+        }
+    }
+
+    pub fn push_text(&self, text: String) {
+        self.inner.lock().unwrap().push_text(text);
+    }
+
+    pub fn push_image(&self, path: String) {
+        self.inner
+            .lock()
+            .unwrap()
+            .push_image(std::path::Path::new(&path));
+    }
 }
 
 // ---
@@ -241,6 +276,14 @@ impl Chat {
 
     pub fn ask(&self, prompt: String) -> Arc<TokenStream> {
         let stream = self.handle.lock().unwrap().ask(prompt);
+        Arc::new(TokenStream {
+            inner: Mutex::new(stream),
+        })
+    }
+
+    pub fn ask_with_prompt(&self, prompt: Arc<Prompt>) -> Arc<TokenStream> {
+        let core_prompt = prompt.inner.lock().unwrap().clone();
+        let stream = self.handle.lock().unwrap().ask(core_prompt);
         Arc::new(TokenStream {
             inner: Mutex::new(stream),
         })
