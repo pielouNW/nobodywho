@@ -8,7 +8,7 @@
 			<key>BinaryPath</key>
 			<string>NobodyWhoFFIFFI.framework/NobodyWhoFFIFFI</string>
 			<key>LibraryIdentifier</key>
-			<string>ios-arm64</string>
+			<string>xros-arm64-simulator</string>
 			<key>LibraryPath</key>
 			<string>NobodyWhoFFIFFI.framework</string>
 			<key>SupportedArchitectures</key>
@@ -16,7 +16,23 @@
 				<string>arm64</string>
 			</array>
 			<key>SupportedPlatform</key>
-			<string>ios</string>
+			<string>xros</string>
+			<key>SupportedPlatformVariant</key>
+			<string>simulator</string>
+		</dict>
+		<dict>
+			<key>BinaryPath</key>
+			<string>NobodyWhoFFIFFI.framework/NobodyWhoFFIFFI</string>
+			<key>LibraryIdentifier</key>
+			<string>watchos-arm64</string>
+			<key>LibraryPath</key>
+			<string>NobodyWhoFFIFFI.framework</string>
+			<key>SupportedArchitectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>SupportedPlatform</key>
+			<string>watchos</string>
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
@@ -53,7 +69,7 @@
 			<key>BinaryPath</key>
 			<string>NobodyWhoFFIFFI.framework/NobodyWhoFFIFFI</string>
 			<key>LibraryIdentifier</key>
-			<string>xros-arm64-simulator</string>
+			<string>ios-arm64</string>
 			<key>LibraryPath</key>
 			<string>NobodyWhoFFIFFI.framework</string>
 			<key>SupportedArchitectures</key>
@@ -61,23 +77,22 @@
 				<string>arm64</string>
 			</array>
 			<key>SupportedPlatform</key>
-			<string>xros</string>
-			<key>SupportedPlatformVariant</key>
-			<string>simulator</string>
+			<string>ios</string>
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
-			<string>NobodyWhoFFIFFI.framework/NobodyWhoFFIFFI</string>
+			<string>NobodyWhoFFIFFI.framework/Versions/A/NobodyWhoFFIFFI</string>
 			<key>LibraryIdentifier</key>
-			<string>watchos-arm64</string>
+			<string>macos-arm64_x86_64</string>
 			<key>LibraryPath</key>
 			<string>NobodyWhoFFIFFI.framework</string>
 			<key>SupportedArchitectures</key>
 			<array>
 				<string>arm64</string>
+				<string>x86_64</string>
 			</array>
 			<key>SupportedPlatform</key>
-			<string>watchos</string>
+			<string>macos</string>
 		</dict>
 		<dict>
 			<key>BinaryPath</key>
@@ -95,21 +110,6 @@
 			<string>ios</string>
 			<key>SupportedPlatformVariant</key>
 			<string>simulator</string>
-		</dict>
-		<dict>
-			<key>BinaryPath</key>
-			<string>NobodyWhoFFIFFI.framework/Versions/A/NobodyWhoFFIFFI</string>
-			<key>LibraryIdentifier</key>
-			<string>macos-arm64_x86_64</string>
-			<key>LibraryPath</key>
-			<string>NobodyWhoFFIFFI.framework</string>
-			<key>SupportedArchitectures</key>
-			<array>
-				<string>arm64</string>
-				<string>x86_64</string>
-			</array>
-			<key>SupportedPlatform</key>
-			<string>macos</string>
 		</dict>
 	</array>
 	<key>CFBundlePackageType</key>
