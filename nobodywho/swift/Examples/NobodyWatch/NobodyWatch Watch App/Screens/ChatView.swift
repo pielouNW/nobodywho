@@ -20,15 +20,10 @@ struct ChatView: View {
                             .id(message.id)
                     }
                     if session.isLoading {
-                        HStack {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 8)
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .id("loading")
+                        TypingIndicator()
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .id("loading")
                     }
                     if let errorMessage = session.errorMessage {
                         Text(errorMessage)
@@ -76,11 +71,38 @@ struct ChatView: View {
     }
 }
 
+/// Animated dot-dot-dot typing indicator
+struct TypingIndicator: View {
+    @State private var dotCount = 0
+    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 5, height: 5)
+                    .opacity(index < dotCount ? 1.0 : 0.3)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .onReceive(timer) { _ in
+            dotCount = (dotCount % 3) + 1
+        }
+    }
+}
+
 #Preview {
     let session = ChatSession()
     session.messages = [
-        Message(role: .user, content: "What's the weather like?"),
-        Message(role: .assistant, content: "I don't have access to live weather data, but you can check the Weather app on your watch."),
+        Message(role: .user, content: "What's 2+2?"),
+        Message(
+            role: .assistant,
+            content: "The answer is 4.",
+            thinking: "The user asked about 2+2. Let me compute this simple arithmetic."
+        ),
         Message(role: .user, content: "Thanks!"),
     ]
     return ChatView(session: session)

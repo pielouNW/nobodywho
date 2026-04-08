@@ -3,15 +3,15 @@
 //  NobodyWatch Watch App
 //
 
-import SwiftUI
 import NobodyWho
+import SwiftUI
 
 @Observable class ChatSession {
     var messages: [Message] = []
     var inputText: String = ""
     var isLoading: Bool = false
     var errorLoadingModel: Bool = false
-    var errorMessage: String? = nil
+    var errorMessage: String?
     var modelLoaded: Bool = false
     var chat: Chat?
 
@@ -61,10 +61,17 @@ import NobodyWho
 
         Task.detached {
             do {
-                let answer = try chat.askBlocking(prompt: question)
-                
+                let response = try chat.askBlocking(prompt: question)
+                let parsed = Self.parseThinkingFromResponse(response)
+
                 await MainActor.run {
-                    self.messages.append(Message(role: .assistant, content: answer))
+                    self.messages.append(
+                        Message(
+                            role: .assistant,
+                            content: parsed.answer,
+                            thinking: parsed.thinking
+                        )
+                    )
                     self.isLoading = false
                 }
             } catch {
@@ -74,5 +81,42 @@ import NobodyWho
                 }
             }
         }
+    }
+
+    /// Parse thinking content from model response.
+    /// Returns (thinking, answer) tuple.
+    static func parseThinkingFromResponse(_ response: String) -> (thinking: String?, answer: String) {
+        let patterns = [
+            "<think>(.*?)</think>",
+            "<thinking>(.*?)</thinking>",
+            "\\[THINKING\\](.*?)\\[/THINKING\\]",
+            "\\[THINK\\](.*?)\\[/THINK\\]",
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: [.caseInsensitive, .dotMatchesLineSeparators]
+            ) else { continue }
+
+            let nsRange = NSRange(response.startIndex..., in: response)
+
+            if let match = regex.firstMatch(in: response, range: nsRange),
+               match.numberOfRanges > 1,
+               let thinkingRange = Range(match.range(at: 1), in: response)
+            {
+                let thinking = String(response[thinkingRange])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let answer = regex.stringByReplacingMatches(
+                    in: response,
+                    range: nsRange,
+                    withTemplate: ""
+                ).trimmingCharacters(in: .whitespacesAndNewlines)
+
+                return (thinking.isEmpty ? nil : thinking, answer)
+            }
+        }
+
+        return (nil, response)
     }
 }

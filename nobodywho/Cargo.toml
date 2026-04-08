@@ -12,3 +12,7 @@ members = [
 
 # edition = "2021" implies resolver = "2".
 resolver = "2"
+
+[patch."https://github.com/AsbjornOlling/llama-cpp-rs"]
+llama-cpp-2 = { path = "../llama-cpp-rs-local/llama-cpp-2" }
+llama-cpp-sys-2 = { path = "../llama-cpp-rs-local/llama-cpp-sys-2" }
