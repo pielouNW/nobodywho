@@ -1,6 +1,6 @@
 /// NobodyWho Swift SDK
 ///
-/// A Swift wrapper around the NobodyWho Rust library for running LLMs locally on iOS, macOS, visionOS, and watchOS.
+/// A Swift wrapper around the NobodyWho Rust library for running LLMs locally on iOS and macOS.
 ///
 /// # Example Usage
 ///

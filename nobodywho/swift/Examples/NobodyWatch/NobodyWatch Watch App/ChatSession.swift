@@ -28,10 +28,11 @@ import SwiftUI
             do {
                 initLogging()
                 // useGpu: false — Metal is not available on watchOS
-                let model = try NobodyWho.loadModel(path: path, useGpu: false)
+                let model = try NobodyWho.loadModel(path: path, useGpu: false, mmprojPath: nil)
                 let config = ChatConfig(
                     contextSize: 2048,
-                    systemPrompt: "You are a helpful assistant running on Apple Watch. Keep answers very short."
+                    systemPrompt: "You are a helpful assistant. Keep answers short.",
+                    allowThinking: false
                 )
                 let chatInstance = try Chat(model: model, config: config)
 
@@ -58,24 +59,34 @@ import SwiftUI
         errorMessage = nil
 
         messages.append(Message(role: .user, content: question))
+        let assistantIndex = messages.count
+        messages.append(Message(role: .assistant, content: "", isStreaming: true))
 
         Task.detached {
             do {
-                let response = try chat.askBlocking(prompt: question)
-                let parsed = Self.parseThinkingFromResponse(response)
+                let stream = chat.ask(prompt: question)
+                var fullResponse = ""
+
+                while let token = stream.nextToken() {
+                    fullResponse += token
+                    let current = fullResponse
+                    await MainActor.run {
+                        self.messages[assistantIndex].content = current
+                    }
+                }
+
+                // Stream complete — parse thinking blocks from final response
+                let parsed = Self.parseThinkingFromResponse(fullResponse)
 
                 await MainActor.run {
-                    self.messages.append(
-                        Message(
-                            role: .assistant,
-                            content: parsed.answer,
-                            thinking: parsed.thinking
-                        )
-                    )
+                    self.messages[assistantIndex].content = parsed.answer
+                    self.messages[assistantIndex].thinking = parsed.thinking
+                    self.messages[assistantIndex].isStreaming = false
                     self.isLoading = false
                 }
             } catch {
                 await MainActor.run {
+                    self.messages[assistantIndex].isStreaming = false
                     self.errorMessage = "Error: \(error.localizedDescription)"
                     self.isLoading = false
                 }

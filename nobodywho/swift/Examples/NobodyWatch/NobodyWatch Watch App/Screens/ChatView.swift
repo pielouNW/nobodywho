@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ChatView: View {
     @Bindable var session: ChatSession
+    private let scrollTimer = Timer.publish(every: 0.3, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +20,7 @@ struct ChatView: View {
                             .padding(.bottom, message.id == session.messages.last?.id ? 8 : 0)
                             .id(message.id)
                     }
-                    if session.isLoading {
+                    if session.isLoading && (session.messages.last?.content.isEmpty ?? true) {
                         TypingIndicator()
                             .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
@@ -39,6 +40,13 @@ struct ChatView: View {
                 .onChange(of: session.messages.count) {
                     withAnimation {
                         proxy.scrollTo(session.messages.last?.id, anchor: .bottom)
+                    }
+                }
+                .onReceive(scrollTimer) { _ in
+                    if session.messages.last?.isStreaming == true {
+                        withAnimation {
+                            proxy.scrollTo(session.messages.last?.id, anchor: .bottom)
+                        }
                     }
                 }
                 .onChange(of: session.isLoading) {

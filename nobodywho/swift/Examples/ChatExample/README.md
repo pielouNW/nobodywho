@@ -41,7 +41,7 @@ A beautiful, simple SwiftUI chat interface showcasing all capabilities of the No
 
 2. **NobodyWho SDK:**
    - Already configured via Swift Package Manager
-   - URL: `https://github.com/PierreBresson/nobodywho`
+   - URL: `https://github.com/Intiserahmed/nobodywho-swift`
 
 ### Build & Run
 
@@ -201,7 +201,7 @@ In `MessageBubble`:
 
 ## 📚 Documentation
 
-- **SDK Docs:** [NobodyWho SDK](https://github.com/PierreBresson/nobodywho)
+- **SDK Docs:** [NobodyWho SDK](https://github.com/Intiserahmed/nobodywho-swift)
 - **Model Formats:** GGUF (llama.cpp compatible)
 - **SwiftUI:** [Apple Documentation](https://developer.apple.com/documentation/swiftui)
 

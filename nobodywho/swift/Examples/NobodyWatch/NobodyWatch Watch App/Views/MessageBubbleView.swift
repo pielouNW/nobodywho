@@ -19,13 +19,22 @@ struct MessageBubble: View {
             }
 
             // Main content
-            Text(message.content)
-                .font(.caption2)
+            if message.isStreaming && message.content.isEmpty {
+                // Waiting for first token
+            } else {
+                HStack(spacing: 0) {
+                    Text(message.content)
+                        .font(.caption2)
+                    if message.isStreaming {
+                        StreamingCursor()
+                    }
+                }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background(message.role == .user ? Color.blue : Color.gray.opacity(0.3))
                 .foregroundStyle(message.role == .user ? .white : .primary)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
         }
         .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
         .padding(.horizontal, 8)
@@ -65,6 +74,18 @@ struct ThinkingBlock: View {
             }
         }
         .padding(.horizontal, 8)
+    }
+}
+
+struct StreamingCursor: View {
+    @State private var visible = true
+    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        Text("|")
+            .font(.caption2)
+            .opacity(visible ? 1 : 0)
+            .onReceive(timer) { _ in visible.toggle() }
     }
 }
 

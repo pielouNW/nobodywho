@@ -10,7 +10,7 @@ Simply add the package - SPM handles everything:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/PierreBresson/nobodywho", from: "0.1.0")
+    .package(url: "https://github.com/nobodywho-ooo/nobodywho", from: "0.1.0")
 ]
 ```
 
@@ -42,7 +42,7 @@ No build steps required.
    ```swift
    .binaryTarget(
        name: "NobodyWhoFFI",
-       url: "https://github.com/PierreBresson/nobodywho/releases/download/nobodywho-swift-v0.2.0/NobodyWhoFFI.xcframework.zip",
+       url: "https://github.com/nobodywho-ooo/nobodywho/releases/download/nobodywho-swift-v0.2.0/NobodyWhoFFI.xcframework.zip",
        checksum: "NEW_CHECKSUM_HERE"
    )
    ```
@@ -57,7 +57,7 @@ No build steps required.
    ```
 
 6. **Create GitHub Release**
-   - Go to: https://github.com/PierreBresson/nobodywho/releases/new
+   - Go to: https://github.com/nobodywho-ooo/nobodywho/releases/new
    - Tag: `nobodywho-swift-v0.2.0`
    - Upload: `NobodyWhoFFI.xcframework.zip`
    - Publish release

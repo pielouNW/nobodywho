@@ -118,7 +118,7 @@ fi
 if [ "$VERSION" = "latest" ]; then
     # Get latest release tag
     echo "Fetching latest release version..."
-    RELEASE_URL="https://api.github.com/repos/PierreBresson/nobodywho/releases/latest"
+    RELEASE_URL="https://api.github.com/repos/nobodywho-ooo/nobodywho/releases/latest"
     VERSION=$(curl -s "$RELEASE_URL" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/^v//')
 
     if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
@@ -131,7 +131,7 @@ if [ "$VERSION" = "latest" ]; then
     echo "Latest version: $VERSION"
 fi
 
-DOWNLOAD_URL="https://github.com/PierreBresson/nobodywho/releases/download/v${VERSION}/NobodyWhoFFI.xcframework.zip"
+DOWNLOAD_URL="https://github.com/nobodywho-ooo/nobodywho/releases/download/v${VERSION}/NobodyWhoFFI.xcframework.zip"
 ZIP_PATH="$CACHE_DIR/$VERSION/NobodyWhoFFI.xcframework.zip"
 
 # Create cache directory

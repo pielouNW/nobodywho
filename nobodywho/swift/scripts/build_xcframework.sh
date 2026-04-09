@@ -2,15 +2,36 @@
 set -e
 
 # Build XCFramework for NobodyWho Swift SDK
-# This script builds the Rust library for iOS and macOS, generates Swift bindings,
-# and packages everything into an XCFramework
+# This script builds the Rust uniffi crate for iOS, macOS, visionOS, and watchOS,
+# generates Swift bindings, and packages everything into an XCFramework.
+#
+# Usage:
+#   ./build_xcframework.sh [OPTIONS]
+#
+# Options:
+#   --debug                 Build debug instead of release
+#   --skip-build            Skip cargo build, only recreate xcframework
+#   --workspace DIR         Path to the nobodywho Cargo workspace
+#                           (default: auto-detected relative to this script)
+#   -h, --help              Show this help
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SWIFT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-WORKSPACE_DIR="$(cd "$SWIFT_DIR/.." && pwd)"
-CORE_DIR="$WORKSPACE_DIR/core"
+
+# Auto-detect workspace: works both as submodule (../.. from swift/) and standalone (../nobodywho/nobodywho)
+if [ -f "$SWIFT_DIR/../Cargo.toml" ] && grep -q "nobodywho-uniffi" "$SWIFT_DIR/../Cargo.toml" 2>/dev/null; then
+    DEFAULT_WORKSPACE="$(cd "$SWIFT_DIR/.." && pwd)"
+elif [ -f "$SWIFT_DIR/../nobodywho/nobodywho/Cargo.toml" ]; then
+    DEFAULT_WORKSPACE="$(cd "$SWIFT_DIR/../nobodywho/nobodywho" && pwd)"
+else
+    DEFAULT_WORKSPACE="$(cd "$SWIFT_DIR/.." && pwd)"
+fi
+
+WORKSPACE_DIR="${NOBODYWHO_WORKSPACE:-$DEFAULT_WORKSPACE}"
+UNIFFI_DIR="$WORKSPACE_DIR/uniffi"
 TARGET_DIR="$WORKSPACE_DIR/target"
-XCFRAMEWORK_OUTPUT="$SWIFT_DIR/NobodyWhoFFIFFI.xcframework"
+XCFRAMEWORK_OUTPUT="$SWIFT_DIR/NobodyWhoFFI.xcframework"
+LIB_NAME="libnobodywho_uniffi"
 
 # Parse arguments
 BUILD_TYPE="release"
@@ -26,13 +47,20 @@ while [[ $# -gt 0 ]]; do
             SKIP_BUILD=true
             shift
             ;;
+        --workspace)
+            WORKSPACE_DIR="$2"
+            UNIFFI_DIR="$WORKSPACE_DIR/uniffi"
+            TARGET_DIR="$WORKSPACE_DIR/target"
+            shift 2
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --debug       Build debug instead of release"
-            echo "  --skip-build  Skip cargo build, only recreate xcframework"
-            echo "  -h, --help    Show this help"
+            echo "  --debug             Build debug instead of release"
+            echo "  --skip-build        Skip cargo build, only recreate xcframework"
+            echo "  --workspace DIR     Path to nobodywho Cargo workspace"
+            echo "  -h, --help          Show this help"
             exit 0
             ;;
         *)
@@ -49,15 +77,22 @@ fi
 
 echo "========================================"
 echo "Building NobodyWho Swift SDK"
-echo "Build type: $BUILD_TYPE"
+echo "Build type:    $BUILD_TYPE"
+echo "Workspace:     $WORKSPACE_DIR"
 echo "========================================"
+
+# Validate workspace
+if [ ! -f "$WORKSPACE_DIR/Cargo.toml" ]; then
+    echo "Error: Cargo workspace not found at $WORKSPACE_DIR"
+    echo "  Set --workspace or NOBODYWHO_WORKSPACE to the nobodywho workspace directory."
+    exit 1
+fi
 
 # Check for required tools
 if ! command -v rustup &> /dev/null; then
     echo "Error: rustup not found. Please install Rust: https://rustup.rs"
     exit 1
 fi
-
 if ! command -v xcodebuild &> /dev/null; then
     echo "Error: xcodebuild not found. Please install Xcode."
     exit 1
@@ -232,63 +267,59 @@ fi
 # Use nightly for tier 3 targets
 CARGO_NIGHTLY="cargo +nightly"
 
+CARGO_MANIFEST="$WORKSPACE_DIR/Cargo.toml"
+
 if [ "$SKIP_BUILD" = false ]; then
     echo ""
-    echo "Building for all Apple targets..."
+    echo "Building nobodywho-uniffi for all Apple targets..."
 
-    # Build for iOS device (arm64)
-    echo "  [1/9] iOS device (aarch64-apple-ios)..."
+    echo "  [1/10] iOS device (aarch64-apple-ios)..."
     set_deployment_target ios
-    cargo build -p nobodywho --features uniffi --target aarch64-apple-ios $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    cargo build -p nobodywho-uniffi --target aarch64-apple-ios $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for iOS simulator (arm64)
-    echo "  [2/9] iOS simulator arm64 (aarch64-apple-ios-sim)..."
+    echo "  [2/10] iOS simulator arm64 (aarch64-apple-ios-sim)..."
     set_deployment_target ios sim
-    cargo build -p nobodywho --features uniffi --target aarch64-apple-ios-sim $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    cargo build -p nobodywho-uniffi --target aarch64-apple-ios-sim $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for iOS simulator (x86_64)
-    echo "  [3/9] iOS simulator x86_64 (x86_64-apple-ios)..."
+    echo "  [3/10] iOS simulator x86_64 (x86_64-apple-ios)..."
     set_deployment_target ios sim
-    cargo build -p nobodywho --features uniffi --target x86_64-apple-ios $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    cargo build -p nobodywho-uniffi --target x86_64-apple-ios $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for macOS (arm64)
-    echo "  [4/9] macOS arm64 (aarch64-apple-darwin)..."
+    echo "  [4/10] macOS arm64 (aarch64-apple-darwin)..."
     set_deployment_target macos
-    cargo build -p nobodywho --features uniffi --target aarch64-apple-darwin $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    cargo build -p nobodywho-uniffi --target aarch64-apple-darwin $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for macOS (x86_64)
-    echo "  [5/9] macOS x86_64 (x86_64-apple-darwin)..."
+    echo "  [5/10] macOS x86_64 (x86_64-apple-darwin)..."
     set_deployment_target macos
-    cargo build -p nobodywho --features uniffi --target x86_64-apple-darwin $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    cargo build -p nobodywho-uniffi --target x86_64-apple-darwin $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for visionOS device (arm64) - tier 3, needs nightly + build-std
-    echo "  [6/9] visionOS device (aarch64-apple-visionos)..."
+    # visionOS device (arm64) - tier 3, needs nightly + build-std
+    echo "  [6/10] visionOS device (aarch64-apple-visionos)..."
     set_deployment_target visionos
-    $CARGO_NIGHTLY build -p nobodywho --features uniffi --target aarch64-apple-visionos $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    $CARGO_NIGHTLY build -p nobodywho-uniffi --target aarch64-apple-visionos $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for visionOS simulator (arm64) - tier 3, needs nightly + build-std
-    echo "  [7/9] visionOS simulator (aarch64-apple-visionos-sim)..."
+    # visionOS simulator (arm64) - tier 3, needs nightly + build-std
+    echo "  [7/10] visionOS simulator (aarch64-apple-visionos-sim)..."
     set_deployment_target visionos sim
-    $CARGO_NIGHTLY build -p nobodywho --features uniffi --target aarch64-apple-visionos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    $CARGO_NIGHTLY build -p nobodywho-uniffi --target aarch64-apple-visionos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for watchOS device (arm64) - tier 3, needs nightly + build-std
-    # Clean llama-cpp-sys-2 cmake caches to ensure the BSD compat header fix takes effect
+    # watchOS device (arm64) - tier 3, needs nightly + build-std
     rm -rf "$TARGET_DIR"/aarch64-apple-watchos/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
     echo "  [8/10] watchOS device (aarch64-apple-watchos)..."
     set_deployment_target watchos "" arm64
-    $CARGO_NIGHTLY build -p nobodywho --features uniffi --target aarch64-apple-watchos $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    $CARGO_NIGHTLY build -p nobodywho-uniffi --target aarch64-apple-watchos $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for watchOS simulator (arm64) - tier 3, needs nightly + build-std
+    # watchOS simulator (arm64) - tier 3, needs nightly + build-std
     rm -rf "$TARGET_DIR"/aarch64-apple-watchos-sim/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
     echo "  [9/10] watchOS simulator arm64 (aarch64-apple-watchos-sim)..."
     set_deployment_target watchos sim arm64
-    $CARGO_NIGHTLY build -p nobodywho --features uniffi --target aarch64-apple-watchos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    $CARGO_NIGHTLY build -p nobodywho-uniffi --target aarch64-apple-watchos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
-    # Build for watchOS simulator (x86_64) - tier 3, needs nightly + build-std
+    # watchOS simulator (x86_64) - tier 3, needs nightly + build-std
     rm -rf "$TARGET_DIR"/x86_64-apple-watchos-sim/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
     echo "  [10/10] watchOS simulator x86_64 (x86_64-apple-watchos-sim)..."
     set_deployment_target watchos sim x86_64
-    $CARGO_NIGHTLY build -p nobodywho --features uniffi --target x86_64-apple-watchos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$WORKSPACE_DIR/Cargo.toml"
+    $CARGO_NIGHTLY build -p nobodywho-uniffi --target x86_64-apple-watchos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 else
     echo ""
     echo "Skipping cargo build (--skip-build flag)"
@@ -297,18 +328,19 @@ fi
 echo ""
 echo "Generating Swift bindings..."
 
+mkdir -p "$SWIFT_DIR/Sources/NobodyWho/Generated"
+
 # Ensure only macOS deployment target is set for bindgen
 set_deployment_target macos
 
-# Generate Swift bindings using uniffi-bindgen from the android-bindgen package
-# (it's the package in the workspace that provides the uniffi-bindgen binary)
-cd "$CORE_DIR"
-cargo run --package nobodywho-android-bindgen --bin uniffi-bindgen -- generate \
-    --library "$TARGET_DIR/aarch64-apple-darwin/$BUILD_TYPE/libnobodywho.dylib" \
+cd "$WORKSPACE_DIR"
+cargo run -p nobodywho-uniffi --bin uniffi-bindgen $CARGO_PROFILE_FLAG -- generate \
+    --library "$TARGET_DIR/aarch64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.dylib" \
     --language swift \
     --out-dir "$SWIFT_DIR/Sources/NobodyWho/Generated"
+cd "$SWIFT_DIR"
 
-cd "$WORKSPACE_DIR"
+echo "  Swift bindings written to Sources/NobodyWho/Generated/"
 
 echo ""
 echo "Creating frameworks..."
@@ -316,25 +348,24 @@ echo "Creating frameworks..."
 # Create universal simulator library (iOS)
 mkdir -p "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE"
 lipo -create \
-    "$TARGET_DIR/aarch64-apple-ios-sim/$BUILD_TYPE/libnobodywho.dylib" \
-    "$TARGET_DIR/x86_64-apple-ios/$BUILD_TYPE/libnobodywho.dylib" \
-    -output "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/libnobodywho.dylib"
+    "$TARGET_DIR/aarch64-apple-ios-sim/$BUILD_TYPE/${LIB_NAME}.dylib" \
+    "$TARGET_DIR/x86_64-apple-ios/$BUILD_TYPE/${LIB_NAME}.dylib" \
+    -output "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/${LIB_NAME}.dylib"
 
 # Create universal macOS library
 mkdir -p "$TARGET_DIR/universal-macos/$BUILD_TYPE"
 lipo -create \
-    "$TARGET_DIR/aarch64-apple-darwin/$BUILD_TYPE/libnobodywho.dylib" \
-    "$TARGET_DIR/x86_64-apple-darwin/$BUILD_TYPE/libnobodywho.dylib" \
-    -output "$TARGET_DIR/universal-macos/$BUILD_TYPE/libnobodywho.dylib"
+    "$TARGET_DIR/aarch64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.dylib" \
+    "$TARGET_DIR/x86_64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.dylib" \
+    -output "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.dylib"
 
 # Create universal watchOS simulator library
 mkdir -p "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE"
 lipo -create \
-    "$TARGET_DIR/aarch64-apple-watchos-sim/$BUILD_TYPE/libnobodywho.dylib" \
-    "$TARGET_DIR/x86_64-apple-watchos-sim/$BUILD_TYPE/libnobodywho.dylib" \
-    -output "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/libnobodywho.dylib"
+    "$TARGET_DIR/aarch64-apple-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" \
+    "$TARGET_DIR/x86_64-apple-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" \
+    -output "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib"
 
-# Helper function to create framework structure
 create_framework() {
     local FRAMEWORK_DIR="$1"
     local DYLIB_PATH="$2"
@@ -343,29 +374,21 @@ create_framework() {
     mkdir -p "$FRAMEWORK_DIR"
 
     if [ "$PLATFORM" = "macos" ]; then
-        # macOS uses versioned framework structure
         mkdir -p "$FRAMEWORK_DIR/Versions/A/Resources"
         mkdir -p "$FRAMEWORK_DIR/Versions/A/Headers"
         mkdir -p "$FRAMEWORK_DIR/Versions/A/Modules"
-        cp "$DYLIB_PATH" "$FRAMEWORK_DIR/Versions/A/NobodyWhoFFIFFI"
-        install_name_tool -id @rpath/NobodyWhoFFIFFI.framework/NobodyWhoFFIFFI "$FRAMEWORK_DIR/Versions/A/NobodyWhoFFIFFI"
+        cp "$DYLIB_PATH" "$FRAMEWORK_DIR/Versions/A/NobodyWhoFFI"
+        install_name_tool -id @rpath/NobodyWhoFFI.framework/NobodyWhoFFI "$FRAMEWORK_DIR/Versions/A/NobodyWhoFFI"
 
-        # Copy header and write framework-compatible modulemap
-        # (uniffi-bindgen generates "module X" but frameworks require "framework module X")
-        if [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/NobodyWhoFFIFFI.h" ]; then
-            cp "$SWIFT_DIR/Sources/NobodyWho/Generated/NobodyWhoFFIFFI.h" "$FRAMEWORK_DIR/Versions/A/Headers/"
-        fi
-        cat > "$FRAMEWORK_DIR/Versions/A/Modules/module.modulemap" <<'MMEOF'
-framework module NobodyWhoFFIFFI {
-    umbrella header "NobodyWhoFFIFFI.h"
-    export *
-    module * { export * }
-}
-MMEOF
+        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" ] && \
+            cp "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" "$FRAMEWORK_DIR/Versions/A/Headers/"
+        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" ] && \
+            sed 's/^module nobodywhoFFI {/framework module nobodywhoFFI {/' \
+                "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" \
+                > "$FRAMEWORK_DIR/Versions/A/Modules/module.modulemap"
 
-        # Create symlinks
         ln -sf A "$FRAMEWORK_DIR/Versions/Current"
-        ln -sf Versions/Current/NobodyWhoFFIFFI "$FRAMEWORK_DIR/NobodyWhoFFIFFI"
+        ln -sf Versions/Current/NobodyWhoFFI "$FRAMEWORK_DIR/NobodyWhoFFI"
         ln -sf Versions/Current/Resources "$FRAMEWORK_DIR/Resources"
         ln -sf Versions/Current/Headers "$FRAMEWORK_DIR/Headers"
         ln -sf Versions/Current/Modules "$FRAMEWORK_DIR/Modules"
@@ -375,28 +398,22 @@ MMEOF
         # iOS/watchOS/visionOS use flat framework structure
         mkdir -p "$FRAMEWORK_DIR/Headers"
         mkdir -p "$FRAMEWORK_DIR/Modules"
-        cp "$DYLIB_PATH" "$FRAMEWORK_DIR/NobodyWhoFFIFFI"
+        cp "$DYLIB_PATH" "$FRAMEWORK_DIR/NobodyWhoFFI"
         # install_name_tool only works on dynamic libraries, skip for static
         if [ "$PLATFORM" != "static" ]; then
-            install_name_tool -id @rpath/NobodyWhoFFIFFI.framework/NobodyWhoFFIFFI "$FRAMEWORK_DIR/NobodyWhoFFIFFI"
+            install_name_tool -id @rpath/NobodyWhoFFI.framework/NobodyWhoFFI "$FRAMEWORK_DIR/NobodyWhoFFI"
         fi
 
-        # Copy header and write framework-compatible modulemap
-        if [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/NobodyWhoFFIFFI.h" ]; then
-            cp "$SWIFT_DIR/Sources/NobodyWho/Generated/NobodyWhoFFIFFI.h" "$FRAMEWORK_DIR/Headers/"
-        fi
-        cat > "$FRAMEWORK_DIR/Modules/module.modulemap" <<'MMEOF'
-framework module NobodyWhoFFIFFI {
-    umbrella header "NobodyWhoFFIFFI.h"
-    export *
-    module * { export * }
-}
-MMEOF
+        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" ] && \
+            cp "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" "$FRAMEWORK_DIR/Headers/"
+        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" ] && \
+            sed 's/^module nobodywhoFFI {/framework module nobodywhoFFI {/' \
+                "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" \
+                > "$FRAMEWORK_DIR/Modules/module.modulemap"
 
         INFO_PLIST="$FRAMEWORK_DIR/Info.plist"
     fi
 
-    # Create Info.plist
     cat > "$INFO_PLIST" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -404,13 +421,13 @@ MMEOF
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>NobodyWhoFFIFFI</string>
+    <string>NobodyWhoFFI</string>
     <key>CFBundleIdentifier</key>
     <string>ooo.nobodywho.ffi</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>NobodyWhoFFIFFI</string>
+    <string>NobodyWhoFFI</string>
     <key>CFBundlePackageType</key>
     <string>FMWK</string>
     <key>CFBundleVersion</key>
@@ -420,47 +437,41 @@ MMEOF
 EOF
 }
 
-# Create frameworks
 echo "  Creating iOS device framework..."
-IOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$IOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/libnobodywho.dylib" "ios"
+IOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$IOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
 
 echo "  Creating iOS simulator framework..."
-IOS_SIM_FRAMEWORK="$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$IOS_SIM_FRAMEWORK" "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/libnobodywho.dylib" "ios"
+IOS_SIM_FRAMEWORK="$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$IOS_SIM_FRAMEWORK" "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
 
 echo "  Creating macOS framework..."
-MACOS_FRAMEWORK="$TARGET_DIR/universal-macos/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$MACOS_FRAMEWORK" "$TARGET_DIR/universal-macos/$BUILD_TYPE/libnobodywho.dylib" "macos"
+MACOS_FRAMEWORK="$TARGET_DIR/universal-macos/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$MACOS_FRAMEWORK" "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.dylib" "macos"
 
 echo "  Creating visionOS device framework..."
-VISIONOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$VISIONOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/libnobodywho.dylib" "ios"
+VISIONOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$VISIONOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
 
 echo "  Creating visionOS simulator framework..."
-VISIONOS_SIM_FRAMEWORK="$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$VISIONOS_SIM_FRAMEWORK" "$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/libnobodywho.dylib" "ios"
+VISIONOS_SIM_FRAMEWORK="$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$VISIONOS_SIM_FRAMEWORK" "$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
 
 # watchOS device only produces a static library (.a) — no dylib support.
 # Wrap it in a framework structure ("static framework") so xcodebuild
 # -create-xcframework can mix it with the dynamic frameworks from other platforms.
 echo "  Creating watchOS device framework (static)..."
-WATCHOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$WATCHOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/libnobodywho.a" "static"
+WATCHOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$WATCHOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/${LIB_NAME}.a" "static"
 
 echo "  Creating watchOS simulator framework..."
-WATCHOS_SIM_FRAMEWORK="$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/NobodyWhoFFIFFI.framework"
-create_framework "$WATCHOS_SIM_FRAMEWORK" "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/libnobodywho.dylib" "ios"
+WATCHOS_SIM_FRAMEWORK="$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/NobodyWhoFFI.framework"
+create_framework "$WATCHOS_SIM_FRAMEWORK" "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
 
 echo ""
 echo "Creating XCFramework..."
-
-# Clean existing xcframework
 rm -rf "$XCFRAMEWORK_OUTPUT"
 
-# Create XCFramework
-# watchOS device uses a static framework (static .a wrapped in .framework bundle)
-# since watchOS doesn't support third-party dynamic libraries.
 xcodebuild -create-xcframework \
     -framework "$IOS_DEVICE_FRAMEWORK" \
     -framework "$IOS_SIM_FRAMEWORK" \
@@ -474,11 +485,5 @@ xcodebuild -create-xcframework \
 echo ""
 echo "========================================"
 echo "Build complete!"
-echo ""
-echo "XCFramework created at:"
-echo "  $XCFRAMEWORK_OUTPUT"
-echo ""
-echo "To use in your Swift project:"
-echo "  1. Add swift/ directory as a local Swift package"
-echo "  2. Or copy $XCFRAMEWORK_OUTPUT to your project"
+echo "XCFramework: $XCFRAMEWORK_OUTPUT"
 echo "========================================"

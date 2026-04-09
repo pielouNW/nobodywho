@@ -34,7 +34,7 @@ swift QuickStart.swift
 
 - A GGUF model file (download from HuggingFace)
 - Swift 5.9+
-- macOS 11+, iOS 13+, visionOS 1+, or watchOS 6+
+- macOS 11+ or iOS 13+
 
 ## Model Recommendations
 

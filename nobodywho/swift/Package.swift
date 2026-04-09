@@ -23,18 +23,15 @@ let package = Package(
     targets: [
         .target(
             name: "NobodyWho",
-            dependencies: ["NobodyWhoFFIFFI"],
+            dependencies: ["nobodywhoFFI"],
             path: "Sources/NobodyWho",
             linkerSettings: [
-                .linkedFramework("NobodyWhoFFIFFI"),
                 .linkedFramework("Accelerate")
             ]
         ),
-        // XCFramework bundled in the repo for reliable SPM distribution
-        // Named NobodyWhoFFIFFI to match the module name in the UniFFI-generated modulemap.
         .binaryTarget(
-            name: "NobodyWhoFFIFFI",
-            path: "NobodyWhoFFIFFI.xcframework"
+            name: "nobodywhoFFI",
+            path: "NobodyWhoFFI.xcframework"
         ),
         .executableTarget(
             name: "NobodyWhoTestCLI",
