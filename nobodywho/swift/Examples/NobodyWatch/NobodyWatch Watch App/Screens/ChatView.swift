@@ -3,6 +3,7 @@
 //  NobodyWatch Watch App
 //
 
+import NobodyWatchUI
 import SwiftUI
 
 struct ChatView: View {
@@ -19,12 +20,6 @@ struct ChatView: View {
                             .listRowBackground(Color.clear)
                             .padding(.bottom, message.id == session.messages.last?.id ? 8 : 0)
                             .id(message.id)
-                    }
-                    if session.isLoading && (session.messages.last?.content.isEmpty ?? true) {
-                        TypingIndicator()
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                            .id("loading")
                     }
                     if let errorMessage = session.errorMessage {
                         Text(errorMessage)
@@ -52,7 +47,7 @@ struct ChatView: View {
                 .onChange(of: session.isLoading) {
                     if session.isLoading {
                         withAnimation {
-                            proxy.scrollTo("loading", anchor: .bottom)
+                            proxy.scrollTo(session.messages.last?.id, anchor: .bottom)
                         }
                     }
                 }
@@ -79,39 +74,5 @@ struct ChatView: View {
     }
 }
 
-/// Animated dot-dot-dot typing indicator
-struct TypingIndicator: View {
-    @State private var dotCount = 0
-    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<3) { index in
-                Circle()
-                    .fill(Color.gray)
-                    .frame(width: 5, height: 5)
-                    .opacity(index < dotCount ? 1.0 : 0.3)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
-        .onReceive(timer) { _ in
-            dotCount = (dotCount % 3) + 1
-        }
-    }
-}
-
-#Preview {
-    let session = ChatSession()
-    session.messages = [
-        Message(role: .user, content: "What's 2+2?"),
-        Message(
-            role: .assistant,
-            content: "The answer is 4.",
-            thinking: "The user asked about 2+2. Let me compute this simple arithmetic."
-        ),
-        Message(role: .user, content: "Thanks!"),
-    ]
-    return ChatView(session: session)
-}
+// Previews for ChatView are available in the NobodyWatchUI package
+// (MessageBubble, TypingIndicator, etc.) which doesn't depend on NobodyWhoFFI.

@@ -4,10 +4,11 @@
 //
 
 import NobodyWho
+import NobodyWatchUI
 import SwiftUI
 
 @Observable class ChatSession {
-    var messages: [Message] = []
+    var messages: [ChatMessage] = []
     var inputText: String = ""
     var isLoading: Bool = false
     var errorLoadingModel: Bool = false
@@ -58,9 +59,9 @@ import SwiftUI
         isLoading = true
         errorMessage = nil
 
-        messages.append(Message(role: .user, content: question))
+        messages.append(ChatMessage(role: .user, content: question))
         let assistantIndex = messages.count
-        messages.append(Message(role: .assistant, content: "", isStreaming: true))
+        messages.append(ChatMessage(role: .assistant, content: "", isStreaming: true))
 
         Task.detached {
             do {

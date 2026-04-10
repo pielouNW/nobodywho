@@ -6,16 +6,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct NobodyWatch_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
-            MainView()
-//            NavigationStack {
-//                HomeView()
-//                DownloaRdModelsView()
-//            }
+            NavigationStack {
+                ModelsView()
+            }
         }
+        .modelContainer(for: DownloadedModel.self)
     }
 }

@@ -1,16 +1,22 @@
 //
 //  LoadingView.swift
-//  NobodyWatch Watch App
+//  NobodyWatchUI
 //
 
 import SwiftUI
 
-struct LoadingView: View {
-    var hasError: Bool
-    var errorMessage: String
-    var onRetry: () -> Void
+public struct LoadingView: View {
+    public var hasError: Bool
+    public var errorMessage: String
+    public var onRetry: () -> Void
 
-    var body: some View {
+    public init(hasError: Bool, errorMessage: String, onRetry: @escaping () -> Void) {
+        self.hasError = hasError
+        self.errorMessage = errorMessage
+        self.onRetry = onRetry
+    }
+
+    public var body: some View {
         if hasError {
             VStack(spacing: 16) {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -31,7 +37,7 @@ struct LoadingView: View {
             VStack(spacing: 8) {
                 ProgressView()
 
-                Text("Loading…")
+                Text("Loading...")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -5,6 +5,7 @@
 //  Created by pierre on 20/03/2026.
 //
 
+import NobodyWatchUI
 import SwiftUI
 
 struct MainView: View {
@@ -21,6 +22,4 @@ struct MainView: View {
     }
 }
 
-#Preview {
-    MainView()
-}
+// Previews for individual UI components are available in the NobodyWatchUI package.
