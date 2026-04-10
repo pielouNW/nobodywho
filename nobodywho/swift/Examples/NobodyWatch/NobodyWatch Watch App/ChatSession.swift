@@ -16,15 +16,9 @@ import SwiftUI
     var modelLoaded: Bool = false
     var chat: Chat?
 
-    private var modelPath: String {
-        Bundle.main.path(forResource: "model", ofType: "gguf")!
-    }
-
-    func loadModel() {
+    func loadModel(path: String) {
         isLoading = true
         errorLoadingModel = false
-
-        let path = modelPath
         Task.detached {
             do {
                 initLogging()

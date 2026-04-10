@@ -1,5 +1,5 @@
 //
-//  MainView.swift
+//  ModelLoadingView.swift
 //  NobodyWatch Watch App
 //
 //  Created by pierre on 20/03/2026.
@@ -8,7 +8,8 @@
 import NobodyWatchUI
 import SwiftUI
 
-struct MainView: View {
+struct ModelLoadingView: View {
+    let modelPath: String
     @State private var session = ChatSession()
 
     var body: some View {
@@ -16,10 +17,8 @@ struct MainView: View {
             ChatView(session: session)
         } else {
             LoadingView(hasError: session.errorLoadingModel, errorMessage: "Failed to load model. Please try again.") {
-                session.loadModel()
+                session.loadModel(path: modelPath)
             }
         }
     }
 }
-
-// Previews for individual UI components are available in the NobodyWatchUI package.

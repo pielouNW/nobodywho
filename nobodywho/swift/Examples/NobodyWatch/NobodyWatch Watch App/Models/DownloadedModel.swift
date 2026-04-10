@@ -13,14 +13,18 @@ final class DownloadedModel {
     var author: String
     var sizeMB: Int
     var fileName: String
-    var filePath: String
 
-    init(remoteId: Int, name: String, author: String, sizeMB: Int, fileName: String, filePath: String) {
+    /// Full path to the model file, derived at runtime from the current documents directory.
+    var filePath: String {
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return documentsDir.appendingPathComponent(fileName).path
+    }
+
+    init(remoteId: Int, name: String, author: String, sizeMB: Int, fileName: String) {
         self.remoteId = remoteId
         self.name = name
         self.author = author
         self.sizeMB = sizeMB
         self.fileName = fileName
-        self.filePath = filePath
     }
 }

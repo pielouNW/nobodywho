@@ -67,7 +67,7 @@ struct ModelsView: View {
         List {
             Section {
                 ForEach(downloadedModels) { model in
-                    NavigationLink(destination: MainView()) {
+                    NavigationLink(destination: ModelLoadingView(modelPath: model.filePath)) {
                         ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB)
                     }
                 }
@@ -120,10 +120,13 @@ struct ModelsView: View {
     private var downloadingSection: some View {
         let downloading = remoteModels.filter { store.isDownloading($0) }
         if !downloading.isEmpty {
-            Section("Downloading") {
+            Section {
                 ForEach(downloading) { model in
                     ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, downloadProgress: store.downloadProgress[model.id] ?? 0)
                 }
+            } header: {
+                Text("Downloading")
+                    .padding(.bottom, 4)
             }
         }
     }
@@ -148,7 +151,6 @@ struct ModelsView: View {
     private func fetchModels() {
         isLoading = true
         errorMessage = nil
-        print("fetch")
 
         Task {
             do {
@@ -159,9 +161,7 @@ struct ModelsView: View {
                     errorMessage = nil
                     isLoading = false
                 }
-                print("fetch success")
             } catch {
-                print("error fetch")
                 await MainActor.run {
                     errorMessage = "Models could not be loaded. Try again later."
                     isLoading = false

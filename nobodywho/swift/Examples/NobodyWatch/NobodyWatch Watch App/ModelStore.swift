@@ -161,8 +161,7 @@ extension ModelStore: URLSessionDownloadDelegate {
                         name: remoteModel.name,
                         author: remoteModel.author,
                         sizeMB: remoteModel.sizeMB,
-                        fileName: remoteModel.fileName,
-                        filePath: destinationURL.path
+                        fileName: remoteModel.fileName
                     )
                     self.modelContext.insert(downloaded)
                     try self.modelContext.save()
