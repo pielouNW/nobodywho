@@ -70,6 +70,15 @@ struct ModelsView: View {
                     NavigationLink(destination: ModelLoadingView(modelPath: model.filePath).id(model.fileName)) {
                         ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB)
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            if store.delete(model) {
+                                fetchModels()
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
             } header: {
                 Text("Downloaded")

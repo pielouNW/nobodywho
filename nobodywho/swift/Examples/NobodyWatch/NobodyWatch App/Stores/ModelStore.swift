@@ -52,6 +52,19 @@ class ModelStore: NSObject {
         downloadProgress[remoteModel.id] != nil
     }
 
+    @discardableResult
+    func delete(_ model: DownloadedModel) -> Bool {
+        let filePath = model.filePath
+        modelContext.delete(model)
+        do {
+            try modelContext.save()
+            try? FileManager.default.removeItem(atPath: filePath)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     func download(_ remoteModel: RemoteModel) {
         guard !isDownloaded(remoteModel), !isDownloading(remoteModel) else { return }
 
