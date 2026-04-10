@@ -5,7 +5,7 @@
 
 import Foundation
 
-struct RemoteModel: Decodable, Identifiable {
+struct RemoteModel: Codable, Identifiable {
     let id: Int
     let name: String
     let sizeMB: Int

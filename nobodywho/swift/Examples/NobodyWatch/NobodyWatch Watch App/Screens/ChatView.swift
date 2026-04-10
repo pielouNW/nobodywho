@@ -73,6 +73,3 @@ struct ChatView: View {
         }
     }
 }
-
-// Previews for ChatView are available in the NobodyWatchUI package
-// (MessageBubble, TypingIndicator, etc.) which doesn't depend on NobodyWhoFFI.

@@ -5,17 +5,26 @@
 //  Created by pierre on 20/03/2026.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
-struct NobodyWatch_Watch_AppApp: App {
+struct NobodyWatch: App {
+    private let modelContainer: ModelContainer
+    @State private var store: ModelStore
+
+    init() {
+        let container = try! ModelContainer(for: DownloadedModel.self)
+        self.modelContainer = container
+        self._store = State(initialValue: ModelStore(modelContext: container.mainContext))
+    }
+
     var body: some Scene {
         WindowGroup {
             NavigationStack {
-                ModelsView()
+                ModelsView(store: store)
             }
         }
-        .modelContainer(for: DownloadedModel.self)
+        .modelContainer(modelContainer)
     }
 }

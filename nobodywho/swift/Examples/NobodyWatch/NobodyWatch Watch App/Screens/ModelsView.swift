@@ -4,28 +4,42 @@
 //
 
 import NobodyWatchUI
-import SwiftData
 import SwiftUI
 
 struct ModelsView: View {
     private let endpoint = URL(string: "https://gist.githubusercontent.com/PierreBresson/f3da1a01c39417237fa2883fb11fe376/raw/6859398979565e0e474bd1858b0cc066cb7364fd/nobody-watchos-app.json")!
 
-    @Environment(\.modelContext) private var modelContext
+    var store: ModelStore
+
     @State private var remoteModels: [RemoteModel] = []
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
-    @State private var store: ModelStore?
 
     private var downloadedModels: [DownloadedModel] {
-        store?.downloadedModels() ?? []
+        store.downloadedModels()
     }
 
     private var availableModels: [RemoteModel] {
-        guard let store else { return remoteModels }
         return remoteModels.filter { !store.isDownloaded($0) && !store.isDownloading($0) }
     }
 
     var body: some View {
+        Group {
+            if downloadedModels.isEmpty {
+                noDownloadedModelsView
+            } else {
+                hasDownloadedModelsView
+            }
+        }
+        .navigationTitle("Models")
+        .onAppear {
+            fetchModels()
+        }
+    }
+
+    // MARK: - No downloaded models: full-screen loading / error / list
+
+    private var noDownloadedModelsView: some View {
         Group {
             if isLoading || errorMessage != nil {
                 LoadingView(
@@ -33,60 +47,108 @@ struct ModelsView: View {
                     errorMessage: errorMessage ?? "",
                     onRetry: fetchModels
                 )
-            } else if remoteModels.isEmpty && downloadedModels.isEmpty {
+            } else if remoteModels.isEmpty {
                 Text("There are no models to download.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
                 List {
-                    if !downloadedModels.isEmpty {
-                        Section("Downloaded") {
-                            ForEach(downloadedModels) { model in
-                                NavigationLink(destination: MainView()) {
-                                    ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB)
-                                }
-                            }
-                        }
-                    }
-
-                    if let store {
-                        let downloading = remoteModels.filter { store.isDownloading($0) }
-                        if !downloading.isEmpty {
-                            Section("Downloading") {
-                                ForEach(downloading) { model in
-                                    ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, downloadProgress: store.downloadProgress[model.id] ?? 0)
-                                }
-                            }
-                        }
-                    }
-
-                    if !availableModels.isEmpty {
-                        Section("Available") {
-                            ForEach(availableModels) { model in
-                                Button {
-                                    store?.download(model)
-                                } label: {
-                                    ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, showDownloadIcon: true)
-                                }
-                            }
-                        }
-                    }
+                    downloadingSection
+                    availableSection
                 }
                 .listStyle(.plain)
             }
         }
-        .navigationTitle("Models")
-        .onAppear {
-            if store == nil {
-                store = ModelStore(modelContext: modelContext)
+    }
+
+    // MARK: - Has downloaded models: always show them, remote list below
+
+    private var hasDownloadedModelsView: some View {
+        List {
+            Section {
+                ForEach(downloadedModels) { model in
+                    NavigationLink(destination: MainView()) {
+                        ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB)
+                    }
+                }
+            } header: {
+                Text("Downloaded")
+                    .padding(.bottom, 4)
             }
-            fetchModels()
+
+            if !availableModels.isEmpty || !remoteModels.filter({ store.isDownloading($0) }).isEmpty || errorMessage != nil || isLoading {
+                Section {
+                    if isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    } else if errorMessage != nil {
+                        Text("Cannot get the list of models at the moment.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .listRowBackground(Color.clear)
+                            .padding(.bottom, 4)
+                        Button {
+                            fetchModels()
+                        } label: {
+                            Label("Retry", systemImage: "arrow.clockwise")
+                                .font(.caption2)
+                        }
+                    } else {
+                        ForEach(remoteModels.filter { store.isDownloading($0) }) { model in
+                            ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, downloadProgress: store.downloadProgress[model.id] ?? 0)
+                        }
+                        ForEach(availableModels) { model in
+                            Button {
+                                store.download(model)
+                            } label: {
+                                ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, showDownloadIcon: true)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Models to download")
+                        .padding(.bottom, 4)
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    // MARK: - Reusable sections for the no-downloaded-models list
+
+    @ViewBuilder
+    private var downloadingSection: some View {
+        let downloading = remoteModels.filter { store.isDownloading($0) }
+        if !downloading.isEmpty {
+            Section("Downloading") {
+                ForEach(downloading) { model in
+                    ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, downloadProgress: store.downloadProgress[model.id] ?? 0)
+                }
+            }
         }
     }
+
+    @ViewBuilder
+    private var availableSection: some View {
+        if !availableModels.isEmpty {
+            Section("Available") {
+                ForEach(availableModels) { model in
+                    Button {
+                        store.download(model)
+                    } label: {
+                        ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, showDownloadIcon: true)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Fetch
 
     private func fetchModels() {
         isLoading = true
         errorMessage = nil
+        print("fetch")
 
         Task {
             do {
@@ -94,9 +156,12 @@ struct ModelsView: View {
                 let decoded = try JSONDecoder().decode([RemoteModel].self, from: data)
                 await MainActor.run {
                     remoteModels = decoded
+                    errorMessage = nil
                     isLoading = false
                 }
+                print("fetch success")
             } catch {
+                print("error fetch")
                 await MainActor.run {
                     errorMessage = "Models could not be loaded. Try again later."
                     isLoading = false
@@ -105,8 +170,3 @@ struct ModelsView: View {
         }
     }
 }
-
-// #Preview("ModelsView") {
-//    ModelsView()
-//        .modelContainer(for: DownloadedModel.self, inMemory: true)
-// }
