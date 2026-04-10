@@ -67,7 +67,7 @@ struct ModelsView: View {
         List {
             Section {
                 ForEach(downloadedModels) { model in
-                    NavigationLink(destination: ModelLoadingView(modelPath: model.filePath)) {
+                    NavigationLink(destination: ModelLoadingView(modelPath: model.filePath).id(model.fileName)) {
                         ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB)
                     }
                 }

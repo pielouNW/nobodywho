@@ -16,6 +16,16 @@ import SwiftUI
     var modelLoaded: Bool = false
     var chat: Chat?
 
+    func unloadModel() {
+        chat = nil
+        modelLoaded = false
+        isLoading = false
+        errorLoadingModel = false
+        errorMessage = nil
+        messages = []
+        inputText = ""
+    }
+
     func loadModel(path: String) {
         isLoading = true
         errorLoadingModel = false
