@@ -7,7 +7,7 @@ import NobodyWatchUI
 import SwiftUI
 
 struct ModelsView: View {
-    private let endpoint = URL(string: "https://gist.githubusercontent.com/PierreBresson/f3da1a01c39417237fa2883fb11fe376/raw/6859398979565e0e474bd1858b0cc066cb7364fd/nobody-watchos-app.json")!
+    private let endpoint = URL(string: "https://raw.githubusercontent.com/pielouNW/watchos-backend/refs/heads/main/backend.json")!
 
     var store: ModelStore
 
