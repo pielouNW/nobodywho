@@ -76,27 +76,45 @@ struct ModelsView: View {
                     .padding(.bottom, 4)
             }
 
-            if !availableModels.isEmpty || !remoteModels.filter({ store.isDownloading($0) }).isEmpty || errorMessage != nil || isLoading {
+            if isLoading {
                 Section {
-                    if isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    } else if errorMessage != nil {
-                        Text("Cannot get the list of models at the moment.")
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } header: {
+                    Text("To download")
+                        .padding(.bottom, 4)
+                }
+            } else if errorMessage != nil {
+                Section {
+                    Text("Cannot get the list of models to download at the moment.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
+                        .padding(.bottom, 4)
+                    Button {
+                        fetchModels()
+                    } label: {
+                        Label("Retry", systemImage: "arrow.clockwise")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .listRowBackground(Color.clear)
-                            .padding(.bottom, 4)
-                        Button {
-                            fetchModels()
-                        } label: {
-                            Label("Retry", systemImage: "arrow.clockwise")
-                                .font(.caption2)
-                        }
-                    } else {
+                    }
+                } header: {
+                    Text("To download")
+                        .padding(.bottom, 4)
+                }
+            } else {
+                if !remoteModels.filter({ store.isDownloading($0) }).isEmpty {
+                    Section {
                         ForEach(remoteModels.filter { store.isDownloading($0) }) { model in
                             ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, downloadProgress: store.downloadProgress[model.id] ?? 0)
                         }
+                    } header: {
+                        Text("Downloading")
+                            .padding(.bottom, 4)
+                    }
+                }
+
+                if !availableModels.isEmpty {
+                    Section {
                         ForEach(availableModels) { model in
                             Button {
                                 store.download(model)
@@ -104,10 +122,10 @@ struct ModelsView: View {
                                 ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, showDownloadIcon: true)
                             }
                         }
+                    } header: {
+                        Text("To download")
+                            .padding(.bottom, 4)
                     }
-                } header: {
-                    Text("Models to download")
-                        .padding(.bottom, 4)
                 }
             }
         }
@@ -134,7 +152,7 @@ struct ModelsView: View {
     @ViewBuilder
     private var availableSection: some View {
         if !availableModels.isEmpty {
-            Section("Available") {
+            Section {
                 ForEach(availableModels) { model in
                     Button {
                         store.download(model)
@@ -142,6 +160,9 @@ struct ModelsView: View {
                         ModelRow(name: model.name, author: model.author, modelSizeMB: model.sizeMB, showDownloadIcon: true)
                     }
                 }
+            } header: {
+                Text("To download")
+                    .padding(.bottom, 4)
             }
         }
     }
