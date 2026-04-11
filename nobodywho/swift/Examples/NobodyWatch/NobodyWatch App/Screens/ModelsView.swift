@@ -55,6 +55,7 @@ struct ModelsView: View {
                 List {
                     downloadingSection
                     availableSection
+                    infoButton
                 }
                 .listStyle(.plain)
             }
@@ -137,6 +138,8 @@ struct ModelsView: View {
                     }
                 }
             }
+
+            infoButton
         }
         .listStyle(.plain)
     }
@@ -173,6 +176,12 @@ struct ModelsView: View {
                 Text("To download")
                     .padding(.bottom, 4)
             }
+        }
+    }
+
+    private var infoButton: some View {
+        NavigationLink(destination: InfoView()) {
+            Label("Info", systemImage: "info.circle")
         }
     }
 

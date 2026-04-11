@@ -343,143 +343,57 @@ cd "$SWIFT_DIR"
 echo "  Swift bindings written to Sources/NobodyWho/Generated/"
 
 echo ""
-echo "Creating frameworks..."
+echo "Creating universal static libraries..."
 
 # Create universal simulator library (iOS)
 mkdir -p "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE"
 lipo -create \
-    "$TARGET_DIR/aarch64-apple-ios-sim/$BUILD_TYPE/${LIB_NAME}.dylib" \
-    "$TARGET_DIR/x86_64-apple-ios/$BUILD_TYPE/${LIB_NAME}.dylib" \
-    -output "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/${LIB_NAME}.dylib"
+    "$TARGET_DIR/aarch64-apple-ios-sim/$BUILD_TYPE/${LIB_NAME}.a" \
+    "$TARGET_DIR/x86_64-apple-ios/$BUILD_TYPE/${LIB_NAME}.a" \
+    -output "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/${LIB_NAME}.a"
 
 # Create universal macOS library
 mkdir -p "$TARGET_DIR/universal-macos/$BUILD_TYPE"
 lipo -create \
-    "$TARGET_DIR/aarch64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.dylib" \
-    "$TARGET_DIR/x86_64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.dylib" \
-    -output "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.dylib"
+    "$TARGET_DIR/aarch64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.a" \
+    "$TARGET_DIR/x86_64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.a" \
+    -output "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.a"
 
 # Create universal watchOS simulator library
 mkdir -p "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE"
 lipo -create \
-    "$TARGET_DIR/aarch64-apple-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" \
-    "$TARGET_DIR/x86_64-apple-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" \
-    -output "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib"
+    "$TARGET_DIR/aarch64-apple-watchos-sim/$BUILD_TYPE/${LIB_NAME}.a" \
+    "$TARGET_DIR/x86_64-apple-watchos-sim/$BUILD_TYPE/${LIB_NAME}.a" \
+    -output "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.a"
 
-create_framework() {
-    local FRAMEWORK_DIR="$1"
-    local DYLIB_PATH="$2"
-    local PLATFORM="$3"
-
-    mkdir -p "$FRAMEWORK_DIR"
-
-    if [ "$PLATFORM" = "macos" ]; then
-        mkdir -p "$FRAMEWORK_DIR/Versions/A/Resources"
-        mkdir -p "$FRAMEWORK_DIR/Versions/A/Headers"
-        mkdir -p "$FRAMEWORK_DIR/Versions/A/Modules"
-        cp "$DYLIB_PATH" "$FRAMEWORK_DIR/Versions/A/NobodyWhoFFI"
-        install_name_tool -id @rpath/NobodyWhoFFI.framework/NobodyWhoFFI "$FRAMEWORK_DIR/Versions/A/NobodyWhoFFI"
-
-        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" ] && \
-            cp "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" "$FRAMEWORK_DIR/Versions/A/Headers/"
-        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" ] && \
-            sed 's/^module nobodywhoFFI {/framework module nobodywhoFFI {/' \
-                "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" \
-                > "$FRAMEWORK_DIR/Versions/A/Modules/module.modulemap"
-
-        ln -sf A "$FRAMEWORK_DIR/Versions/Current"
-        ln -sf Versions/Current/NobodyWhoFFI "$FRAMEWORK_DIR/NobodyWhoFFI"
-        ln -sf Versions/Current/Resources "$FRAMEWORK_DIR/Resources"
-        ln -sf Versions/Current/Headers "$FRAMEWORK_DIR/Headers"
-        ln -sf Versions/Current/Modules "$FRAMEWORK_DIR/Modules"
-
-        INFO_PLIST="$FRAMEWORK_DIR/Versions/A/Resources/Info.plist"
-    else
-        # iOS/watchOS/visionOS use flat framework structure
-        mkdir -p "$FRAMEWORK_DIR/Headers"
-        mkdir -p "$FRAMEWORK_DIR/Modules"
-        cp "$DYLIB_PATH" "$FRAMEWORK_DIR/NobodyWhoFFI"
-        # install_name_tool only works on dynamic libraries, skip for static
-        if [ "$PLATFORM" != "static" ]; then
-            install_name_tool -id @rpath/NobodyWhoFFI.framework/NobodyWhoFFI "$FRAMEWORK_DIR/NobodyWhoFFI"
-        fi
-
-        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" ] && \
-            cp "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" "$FRAMEWORK_DIR/Headers/"
-        [ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" ] && \
-            sed 's/^module nobodywhoFFI {/framework module nobodywhoFFI {/' \
-                "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" \
-                > "$FRAMEWORK_DIR/Modules/module.modulemap"
-
-        INFO_PLIST="$FRAMEWORK_DIR/Info.plist"
-    fi
-
-    cat > "$INFO_PLIST" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>NobodyWhoFFI</string>
-    <key>CFBundleIdentifier</key>
-    <string>ooo.nobodywho.ffi</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>NobodyWhoFFI</string>
-    <key>CFBundlePackageType</key>
-    <string>FMWK</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-</dict>
-</plist>
-EOF
-}
-
-echo "  Creating iOS device framework..."
-IOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$IOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
-
-echo "  Creating iOS simulator framework..."
-IOS_SIM_FRAMEWORK="$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$IOS_SIM_FRAMEWORK" "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
-
-echo "  Creating macOS framework..."
-MACOS_FRAMEWORK="$TARGET_DIR/universal-macos/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$MACOS_FRAMEWORK" "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.dylib" "macos"
-
-echo "  Creating visionOS device framework..."
-VISIONOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$VISIONOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
-
-echo "  Creating visionOS simulator framework..."
-VISIONOS_SIM_FRAMEWORK="$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$VISIONOS_SIM_FRAMEWORK" "$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
-
-# watchOS device only produces a static library (.a) — no dylib support.
-# Wrap it in a framework structure ("static framework") so xcodebuild
-# -create-xcframework can mix it with the dynamic frameworks from other platforms.
-echo "  Creating watchOS device framework (static)..."
-WATCHOS_DEVICE_FRAMEWORK="$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$WATCHOS_DEVICE_FRAMEWORK" "$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/${LIB_NAME}.a" "static"
-
-echo "  Creating watchOS simulator framework..."
-WATCHOS_SIM_FRAMEWORK="$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/NobodyWhoFFI.framework"
-create_framework "$WATCHOS_SIM_FRAMEWORK" "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.dylib" "ios"
+# Prepare a shared headers directory for all -library entries
+HEADERS_DIR="$TARGET_DIR/xcframework-headers"
+rm -rf "$HEADERS_DIR"
+mkdir -p "$HEADERS_DIR"
+[ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" ] && \
+    cp "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.h" "$HEADERS_DIR/"
+[ -f "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" ] && \
+    cp "$SWIFT_DIR/Sources/NobodyWho/Generated/nobodywhoFFI.modulemap" "$HEADERS_DIR/module.modulemap"
 
 echo ""
 echo "Creating XCFramework..."
 rm -rf "$XCFRAMEWORK_OUTPUT"
 
 xcodebuild -create-xcframework \
-    -framework "$IOS_DEVICE_FRAMEWORK" \
-    -framework "$IOS_SIM_FRAMEWORK" \
-    -framework "$MACOS_FRAMEWORK" \
-    -framework "$VISIONOS_DEVICE_FRAMEWORK" \
-    -framework "$VISIONOS_SIM_FRAMEWORK" \
-    -framework "$WATCHOS_DEVICE_FRAMEWORK" \
-    -framework "$WATCHOS_SIM_FRAMEWORK" \
+    -library "$TARGET_DIR/aarch64-apple-ios/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
+    -library "$TARGET_DIR/universal-ios-sim/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
+    -library "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
+    -library "$TARGET_DIR/aarch64-apple-visionos/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
+    -library "$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
+    -library "$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
+    -library "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.a" \
+    -headers "$HEADERS_DIR" \
     -output "$XCFRAMEWORK_OUTPUT"
 
 echo ""

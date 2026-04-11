@@ -26,7 +26,7 @@ let package = Package(
             dependencies: ["nobodywhoFFI"],
             path: "Sources/NobodyWho",
             linkerSettings: [
-                .linkedFramework("Accelerate")
+                .linkedFramework("Accelerate"),
             ]
         ),
         .binaryTarget(
