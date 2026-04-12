@@ -1,6 +1,6 @@
 //
 //  ModelRow.swift
-//  NobodyWatchUI
+//  ValkyrieUI
 //
 
 import SwiftUI

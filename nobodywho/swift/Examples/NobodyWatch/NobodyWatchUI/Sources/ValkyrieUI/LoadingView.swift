@@ -1,6 +1,6 @@
 //
 //  LoadingView.swift
-//  NobodyWatchUI
+//  ValkyrieUI
 //
 
 import SwiftUI

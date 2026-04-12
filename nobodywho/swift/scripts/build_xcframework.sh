@@ -238,8 +238,8 @@ add_compile_options(-include ${compat_header})"
             # Apple targets.  These frameworks don't exist in the watchOS SDK, so
             # we create stub .tbd files and point the linker at them via -F.
             local stub_fw_dir="$TARGET_DIR/watchos-stub-frameworks"
-            create_stub_framework "$stub_fw_dir" "Metal" "arm64-watchos arm64-watchos-simulator x86_64-watchos-simulator"
-            create_stub_framework "$stub_fw_dir" "MetalKit" "arm64-watchos arm64-watchos-simulator x86_64-watchos-simulator"
+            create_stub_framework "$stub_fw_dir" "Metal" "arm64-watchos arm64_32-watchos arm64-watchos-simulator x86_64-watchos-simulator"
+            create_stub_framework "$stub_fw_dir" "MetalKit" "arm64-watchos arm64_32-watchos arm64-watchos-simulator x86_64-watchos-simulator"
             export RUSTFLAGS="${RUSTFLAGS:-} -Clink-arg=-F${stub_fw_dir}"
             if [ "$sim" = "sim" ]; then
                 local sdk_path=$(xcrun --sdk watchsimulator --show-sdk-path)
@@ -271,6 +271,25 @@ CARGO_MANIFEST="$WORKSPACE_DIR/Cargo.toml"
 
 if [ "$SKIP_BUILD" = false ]; then
     echo ""
+    # Patch ggml's cmake arch detection to recognize arm64_32 as ARM.
+    # The upstream ggml_get_system_arch() only checks CMAKE_OSX_ARCHITECTURES == "arm64"
+    # exactly, causing arm64_32 (watchOS ILP32) to be detected as UNKNOWN, which
+    # skips the arch/arm/ NEON-optimized source files.
+    echo "Patching ggml cmake arch detection for arm64_32 support..."
+    for common_cmake in \
+        "$HOME"/.cargo/git/checkouts/llama-cpp-rs-*/*/llama-cpp-sys-2/llama.cpp/ggml/cmake/common.cmake \
+        "$(dirname "$SCRIPT_DIR")/../../llama-cpp-rs-local/llama-cpp-sys-2/llama.cpp/ggml/cmake/common.cmake" \
+    ; do
+        if [ -f "$common_cmake" ]; then
+            if grep -q 'STREQUAL "arm64"' "$common_cmake" && \
+               ! grep -q 'MATCHES "^arm64"' "$common_cmake"; then
+                sed -i '' 's/CMAKE_OSX_ARCHITECTURES      STREQUAL "arm64"/CMAKE_OSX_ARCHITECTURES MATCHES "^arm64"/' "$common_cmake"
+                sed -i '' 's/CMAKE_OSX_ARCHITECTURES STREQUAL "arm64"/CMAKE_OSX_ARCHITECTURES MATCHES "^arm64"/' "$common_cmake"
+                echo "  Patched: $common_cmake"
+            fi
+        fi
+    done
+
     echo "Building nobodywho-uniffi for all Apple targets..."
 
     echo "  [1/10] iOS device (aarch64-apple-ios)..."
@@ -305,19 +324,26 @@ if [ "$SKIP_BUILD" = false ]; then
 
     # watchOS device (arm64) - tier 3, needs nightly + build-std
     rm -rf "$TARGET_DIR"/aarch64-apple-watchos/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
-    echo "  [8/10] watchOS device (aarch64-apple-watchos)..."
+    echo "  [8/11] watchOS device (aarch64-apple-watchos)..."
     set_deployment_target watchos "" arm64
     $CARGO_NIGHTLY build -p nobodywho-uniffi --target aarch64-apple-watchos $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
+    # watchOS device (arm64_32) - tier 3, needs nightly + build-std
+    # Required by App Store Connect for Apple Watch Series 4-8 support
+    rm -rf "$TARGET_DIR"/arm64_32-apple-watchos/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
+    echo "  [9/11] watchOS device arm64_32 (arm64_32-apple-watchos)..."
+    set_deployment_target watchos "" arm64_32
+    $CARGO_NIGHTLY build -p nobodywho-uniffi --target arm64_32-apple-watchos $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
+
     # watchOS simulator (arm64) - tier 3, needs nightly + build-std
     rm -rf "$TARGET_DIR"/aarch64-apple-watchos-sim/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
-    echo "  [9/10] watchOS simulator arm64 (aarch64-apple-watchos-sim)..."
+    echo "  [10/11] watchOS simulator arm64 (aarch64-apple-watchos-sim)..."
     set_deployment_target watchos sim arm64
     $CARGO_NIGHTLY build -p nobodywho-uniffi --target aarch64-apple-watchos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 
     # watchOS simulator (x86_64) - tier 3, needs nightly + build-std
     rm -rf "$TARGET_DIR"/x86_64-apple-watchos-sim/"$BUILD_TYPE"/build/llama-cpp-sys-2-* 2>/dev/null || true
-    echo "  [10/10] watchOS simulator x86_64 (x86_64-apple-watchos-sim)..."
+    echo "  [11/11] watchOS simulator x86_64 (x86_64-apple-watchos-sim)..."
     set_deployment_target watchos sim x86_64
     $CARGO_NIGHTLY build -p nobodywho-uniffi --target x86_64-apple-watchos-sim $BUILD_STD_FLAG $CARGO_PROFILE_FLAG --manifest-path "$CARGO_MANIFEST"
 else
@@ -359,6 +385,13 @@ lipo -create \
     "$TARGET_DIR/x86_64-apple-darwin/$BUILD_TYPE/${LIB_NAME}.a" \
     -output "$TARGET_DIR/universal-macos/$BUILD_TYPE/${LIB_NAME}.a"
 
+# Create universal watchOS device library (arm64 + arm64_32)
+mkdir -p "$TARGET_DIR/universal-watchos/$BUILD_TYPE"
+lipo -create \
+    "$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/${LIB_NAME}.a" \
+    "$TARGET_DIR/arm64_32-apple-watchos/$BUILD_TYPE/${LIB_NAME}.a" \
+    -output "$TARGET_DIR/universal-watchos/$BUILD_TYPE/${LIB_NAME}.a"
+
 # Create universal watchOS simulator library
 mkdir -p "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE"
 lipo -create \
@@ -390,7 +423,7 @@ xcodebuild -create-xcframework \
     -headers "$HEADERS_DIR" \
     -library "$TARGET_DIR/aarch64-apple-visionos-sim/$BUILD_TYPE/${LIB_NAME}.a" \
     -headers "$HEADERS_DIR" \
-    -library "$TARGET_DIR/aarch64-apple-watchos/$BUILD_TYPE/${LIB_NAME}.a" \
+    -library "$TARGET_DIR/universal-watchos/$BUILD_TYPE/${LIB_NAME}.a" \
     -headers "$HEADERS_DIR" \
     -library "$TARGET_DIR/universal-watchos-sim/$BUILD_TYPE/${LIB_NAME}.a" \
     -headers "$HEADERS_DIR" \

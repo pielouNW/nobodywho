@@ -1,6 +1,6 @@
 //
 //  MessageBubbleView.swift
-//  NobodyWatchUI
+//  ValkyrieUI
 //
 
 import SwiftUI

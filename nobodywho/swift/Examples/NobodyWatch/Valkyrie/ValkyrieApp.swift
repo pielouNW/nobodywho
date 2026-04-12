@@ -1,15 +1,13 @@
 //
-//  NobodyWatchApp.swift
-//  NobodyWatch Watch App
-//
-//  Created by pierre on 20/03/2026.
+//  ValkyrieApp.swift
+//  Valkyrie
 //
 
 import SwiftData
 import SwiftUI
 
 @main
-struct NobodyWatch: App {
+struct ValkyrieApp: App {
     private let modelContainer: ModelContainer
     @State private var store: ModelStore
 

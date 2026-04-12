@@ -4,7 +4,7 @@
 //
 
 import NobodyWho
-import NobodyWatchUI
+import ValkyrieUI
 import SwiftUI
 
 @Observable class ChatSession {

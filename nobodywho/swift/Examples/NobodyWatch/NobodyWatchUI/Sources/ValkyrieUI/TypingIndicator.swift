@@ -1,6 +1,6 @@
 //
 //  TypingIndicator.swift
-//  NobodyWatchUI
+//  ValkyrieUI
 //
 
 import SwiftUI

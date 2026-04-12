@@ -3,7 +3,7 @@
 //  NobodyWatch Watch App
 //
 
-import NobodyWatchUI
+import ValkyrieUI
 import SwiftUI
 
 struct ModelsView: View {

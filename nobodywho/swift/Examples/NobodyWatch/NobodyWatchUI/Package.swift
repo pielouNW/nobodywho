@@ -2,20 +2,20 @@
 import PackageDescription
 
 let package = Package(
-    name: "NobodyWatchUI",
+    name: "ValkyrieUI",
     platforms: [
         .watchOS(.v10)
     ],
     products: [
         .library(
-            name: "NobodyWatchUI",
-            targets: ["NobodyWatchUI"]
+            name: "ValkyrieUI",
+            targets: ["ValkyrieUI"]
         ),
     ],
     targets: [
         .target(
-            name: "NobodyWatchUI",
-            path: "Sources/NobodyWatchUI"
+            name: "ValkyrieUI",
+            path: "Sources/ValkyrieUI"
         ),
     ]
 )

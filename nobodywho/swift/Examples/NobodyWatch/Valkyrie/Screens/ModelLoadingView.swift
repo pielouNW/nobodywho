@@ -5,7 +5,7 @@
 //  Created by pierre on 20/03/2026.
 //
 
-import NobodyWatchUI
+import ValkyrieUI
 import SwiftUI
 
 struct ModelLoadingView: View {
