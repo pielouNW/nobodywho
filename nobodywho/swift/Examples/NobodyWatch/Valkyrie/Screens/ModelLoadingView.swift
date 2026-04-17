@@ -5,8 +5,8 @@
 //  Created by pierre on 20/03/2026.
 //
 
-import ValkyrieUI
 import SwiftUI
+import ValkyrieUI
 
 struct ModelLoadingView: View {
     let modelPath: String
@@ -15,7 +15,7 @@ struct ModelLoadingView: View {
     var body: some View {
         Group {
             if session.modelLoaded {
-                ChatView(session: session)
+                ChatsView(session: session)
             } else {
                 LoadingView(hasError: session.errorLoadingModel, errorMessage: "Failed to load model. Please try again.") {
                     session.loadModel(path: modelPath)

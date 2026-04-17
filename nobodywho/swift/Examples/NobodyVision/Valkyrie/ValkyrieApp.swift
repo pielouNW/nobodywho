@@ -1,14 +1,14 @@
 //
-//  NobodyVisionApp.swift
-//  NobodyVision
+//  ValkyrieApp.swift
+//  Valkyrie
 //
-//  Created by pierre on 27/03/2026.
+//  Created by Pierre Bresson on 17/04/2026.
 //
 
 import SwiftUI
 
 @main
-struct NobodyVisionApp: App {
+struct ValkyrieApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

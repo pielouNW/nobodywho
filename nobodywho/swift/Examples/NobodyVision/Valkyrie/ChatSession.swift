@@ -1,0 +1,144 @@
+//
+//  ChatSession.swift
+//  NobodyVision
+//
+
+import SwiftUI
+import NobodyWho
+
+struct Message: Identifiable {
+    let id = UUID()
+    let role: NobodyWho.Role
+    var content: String
+    var thinking: String?
+    var isStreaming: Bool = false
+}
+
+@Observable class ChatSession {
+    var messages: [Message] = []
+    var inputText: String = ""
+    var isLoading: Bool = false
+    var errorLoadingModel: Bool = false
+    var errorMessage: String?
+    var modelLoaded: Bool = false
+    var chat: Chat?
+
+    private var modelPath: String {
+        Bundle.main.path(forResource: "model", ofType: "gguf")!
+    }
+
+    func loadModel() {
+        isLoading = true
+        errorLoadingModel = false
+
+        let path = modelPath
+        Task.detached {
+            do {
+                initLogging()
+                #if targetEnvironment(simulator)
+                let useGpu = false
+                #else
+                let useGpu = true
+                #endif
+                let model = try NobodyWho.loadModel(path: path, useGpu: useGpu, mmprojPath: nil)
+                let config = ChatConfig(
+                    contextSize: 2048,
+                    systemPrompt: "You are a helpful assistant running on Apple Vision Pro. Keep answers concise.",
+                    allowThinking: true
+                )
+                let chatInstance = try Chat(model: model, config: config)
+
+                await MainActor.run {
+                    self.chat = chatInstance
+                    self.modelLoaded = true
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorLoadingModel = true
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+
+    func sendMessage() {
+        guard let chat, !inputText.isEmpty else { return }
+        let question = inputText
+        inputText = ""
+        isLoading = true
+        errorMessage = nil
+
+        messages.append(Message(role: .user, content: question))
+        let assistantIndex = messages.count
+        messages.append(Message(role: .assistant, content: "", isStreaming: true))
+
+        Task.detached {
+            do {
+                let stream = chat.ask(prompt: question)
+                var fullResponse = ""
+
+                while let token = stream.nextToken() {
+                    fullResponse += token
+                    let current = fullResponse
+                    await MainActor.run {
+                        self.messages[assistantIndex].content = current
+                    }
+                }
+
+                // Stream complete — parse thinking blocks from final response
+                let parsed = Self.parseThinkingFromResponse(fullResponse)
+
+                await MainActor.run {
+                    self.messages[assistantIndex].content = parsed.answer
+                    self.messages[assistantIndex].thinking = parsed.thinking
+                    self.messages[assistantIndex].isStreaming = false
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.messages[assistantIndex].isStreaming = false
+                    self.errorMessage = "Error: \(error.localizedDescription)"
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+
+    /// Parse thinking content from model response.
+    /// Returns (thinking, answer) tuple.
+    static func parseThinkingFromResponse(_ response: String) -> (thinking: String?, answer: String) {
+        let patterns = [
+            "<think>(.*?)</think>",
+            "<thinking>(.*?)</thinking>",
+            "\\[THINKING\\](.*?)\\[/THINKING\\]",
+            "\\[THINK\\](.*?)\\[/THINK\\]",
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern,
+                options: [.caseInsensitive, .dotMatchesLineSeparators]
+            ) else { continue }
+
+            let nsRange = NSRange(response.startIndex..., in: response)
+
+            if let match = regex.firstMatch(in: response, range: nsRange),
+               match.numberOfRanges > 1,
+               let thinkingRange = Range(match.range(at: 1), in: response)
+            {
+                let thinking = String(response[thinkingRange])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let answer = regex.stringByReplacingMatches(
+                    in: response,
+                    range: nsRange,
+                    withTemplate: ""
+                ).trimmingCharacters(in: .whitespacesAndNewlines)
+
+                return (thinking.isEmpty ? nil : thinking, answer)
+            }
+        }
+
+        return (nil, response)
+    }
+}

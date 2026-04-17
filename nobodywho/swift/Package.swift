@@ -27,6 +27,7 @@ let package = Package(
             path: "Sources/NobodyWho",
             linkerSettings: [
                 .linkedFramework("Accelerate"),
+                .linkedLibrary("c++"),
             ]
         ),
         .binaryTarget(
