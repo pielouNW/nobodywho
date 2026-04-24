@@ -7,7 +7,7 @@ import SwiftUI
 import Textual
 
 public struct ChatMessage: Identifiable {
-    public let id = UUID()
+    public let id: UUID
     public let role: Role
     public var content: String
     public var thinking: String?
@@ -17,7 +17,8 @@ public struct ChatMessage: Identifiable {
         case user, assistant
     }
 
-    public init(role: Role, content: String, thinking: String? = nil, isStreaming: Bool = false) {
+    public init(id: UUID = UUID(), role: Role, content: String, thinking: String? = nil, isStreaming: Bool = false) {
+        self.id = id
         self.role = role
         self.content = content
         self.thinking = thinking
@@ -33,7 +34,9 @@ public struct MessageBubble: View {
         self.message = message
     }
 
-    var isUser: Bool { message.role == .user }
+    var isUser: Bool {
+        message.role == .user
+    }
 
     private var cleanedContent: String {
         message.content
@@ -106,7 +109,7 @@ public struct TypingIndicator: View {
 
     public var body: some View {
         HStack(spacing: 4) {
-            ForEach(0..<3, id: \.self) { i in
+            ForEach(0 ..< 3, id: \.self) { i in
                 Circle()
                     .frame(width: 7, height: 7)
                     .opacity(phase == i ? 1 : 0.3)
@@ -118,7 +121,7 @@ public struct TypingIndicator: View {
     }
 }
 
-#Preview("MessageBubble") {
+#Preview("Simple") {
     ScrollView {
         VStack(spacing: 12) {
             MessageBubble(message: ChatMessage(role: .user, content: "Hello!"))
@@ -129,23 +132,138 @@ public struct TypingIndicator: View {
                 thinking: "The user asked a question. Let me think carefully about the answer."
             ))
             MessageBubble(message: ChatMessage(role: .assistant, content: "", isStreaming: true))
-            MessageBubble(message: ChatMessage(
-                role: .assistant,
-                content: """
-                ## Banana bread recipe
-
-                Here are the **three** steps:
-
-                1. Mash *ripe* bananas.
-                2. Mix with flour and sugar.
-                3. Bake for 50 minutes.
-
-                ```swift
-                let oven = 175 // °C
-                ```
-                """
-            ))
         }
         .padding()
+    }
+}
+
+#Preview("Markdown") {
+    ScrollView {
+        MessageBubble(message: ChatMessage(
+            role: .assistant,
+            content: #"""
+            # h1 Heading 8-)
+            ## h2 Heading
+            ### h3 Heading
+            #### h4 Heading
+            ##### h5 Heading
+            ###### h6 Heading
+
+
+            ## Horizontal Rules
+
+            ___
+
+            ---
+
+            ***
+
+
+            ## Typographic replacements
+
+            Enable typographer option to see result.
+
+            (c) (C) (r) (R) (tm) (TM) (p) (P) +-
+
+            test.. test... test..... test?..... test!....
+
+            !!!!!! ???? ,,  -- ---
+
+            "Smartypants, double quotes" and 'single quotes'
+
+
+            ## Emphasis
+
+            **This is bold text**
+
+            __This is bold text__
+
+            *This is italic text*
+
+            _This is italic text_
+
+            ~~Strikethrough~~
+
+
+            ## Blockquotes
+
+
+            > Blockquotes can also be nested...
+            >> ...by using additional greater-than signs right next to each other...
+            > > > ...or with spaces between arrows.
+
+
+            ## Lists
+
+            Unordered
+
+            + Create a list by starting a line with `+`, `-`, or `*`
+            + Sub-lists are made by indenting 2 spaces:
+              - Marker character change forces new list start:
+                * Ac tristique libero volutpat at
+                + Facilisis in pretium nisl aliquet
+                - Nulla volutpat aliquam velit
+            + Very easy!
+
+            Ordered
+
+            1. Lorem ipsum dolor sit amet
+            2. Consectetur adipiscing elit
+            3. Integer molestie lorem at massa
+
+
+            1. You can use sequential numbers...
+            1. ...or keep all the numbers as `1.`
+
+            Start numbering with offset:
+
+            57. foo
+            1. bar
+
+
+            ## Code
+
+            Inline `code`
+
+            Indented code
+
+                // Some comments
+                line 1 of code
+                line 2 of code
+                line 3 of code
+
+
+            Block code "fences"
+
+            ```
+            Sample text here...
+            ```
+
+            Syntax highlighting
+
+            ``` js
+            var foo = function (bar) {
+              return bar++;
+            };
+
+            console.log(foo(5));
+            ```
+
+            """#
+        ))
+    }
+}
+
+#Preview("Markdown small") {
+    ScrollView {
+        MessageBubble(message: ChatMessage(
+            role: .assistant,
+            content: #"""
+            The World War II refers to two distinct events:
+            1. **World War I** (1914–1918):
+               - **Key events**:
+                 - The assassination of Archduke Franz Ferdinand in 1914.
+            """#
+        ))
     }
 }

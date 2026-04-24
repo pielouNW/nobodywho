@@ -3,15 +3,15 @@
 //  NobodyVision
 //
 
-import SwiftUI
-import SwiftData
 import NobodyWho
+import SwiftData
+import SwiftUI
 import ValkyrieUI
 
 @Observable class ChatSession {
     var messages: [ChatMessage] = []
-    var inputText: String = ""
     var isLoading: Bool = false
+    var isStreaming: Bool = false
     var errorLoadingModel: Bool = false
     var errorMessage: String?
     var modelLoaded: Bool = false
@@ -50,7 +50,7 @@ import ValkyrieUI
                 let model = try NobodyWho.loadModel(path: path, useGpu: useGpu, mmprojPath: nil)
                 let config = ChatConfig(
                     contextSize: 2048,
-                    systemPrompt: "You are a helpful assistant running on Apple Vision Pro. Keep answers concise.",
+                    systemPrompt: "You are a helpful assistant.",
                     allowThinking: true
                 )
                 let chatInstance = try Chat(model: model, config: config)
@@ -83,6 +83,7 @@ import ValkyrieUI
     func loadConversation(_ conversation: Conversation) {
         let sorted = conversation.messages.sorted(by: { $0.order < $1.order })
         messages = sorted.map { ChatMessage(
+            id: $0.id,
             role: $0.role == .user ? .user : .assistant,
             content: $0.content,
             thinking: $0.thinking,
@@ -98,11 +99,9 @@ import ValkyrieUI
         chat = try? Chat(model: model, config: config)
     }
 
-    func sendMessage() {
-        guard let chat, !inputText.isEmpty else { return }
-        let question = inputText
-        inputText = ""
-        isLoading = true
+    func ask(_ question: String) {
+        guard let chat, !question.isEmpty else { return }
+        isStreaming = true
         errorMessage = nil
 
         messages.append(ChatMessage(role: .user, content: question))
@@ -132,7 +131,7 @@ import ValkyrieUI
                     self.messages[assistantIndex].content = parsed.answer
                     self.messages[assistantIndex].thinking = parsed.thinking
                     self.messages[assistantIndex].isStreaming = false
-                    self.isLoading = false
+                    self.isStreaming = false
                     self.persistAssistantMessage(
                         content: parsed.answer,
                         thinking: parsed.thinking,
@@ -143,7 +142,7 @@ import ValkyrieUI
                 await MainActor.run {
                     self.messages[assistantIndex].isStreaming = false
                     self.errorMessage = "Error: \(error.localizedDescription)"
-                    self.isLoading = false
+                    self.isStreaming = false
                 }
             }
         }

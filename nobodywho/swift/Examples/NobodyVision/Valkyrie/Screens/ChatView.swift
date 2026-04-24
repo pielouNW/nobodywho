@@ -15,37 +15,41 @@ struct ChatView: View {
     @State private var session = ChatSession()
 
     var body: some View {
+        let selectedChatModel = router.selectedChatModel
+        let selectedConversationId = router.selectedConversationId
+
         NavigationSplitView {
             List {
-                if let model = router.selectedChatModel {
-                    SidebarModelRow(name: model.name, author: model.author, sizeGB: model.sizeGB).padding(.top, 16)
+                if let selectedChatModel {
+                    SidebarModelRow(name: selectedChatModel.name, author: selectedChatModel.author, sizeGB: selectedChatModel.sizeGB).padding(.top, 16)
                 }
                 Section("Chats") {
                     SidebarChatRow(
                         title: "New chat",
                         icon: "square.and.pencil",
-                        isSelected: router.selectedConversationId == nil
+                        isSelected: selectedConversationId == nil
                     ) {
                         selectNewChat()
                     }
-                    if let model = router.selectedChatModel {
-                        ConversationList(modelRemoteId: model.remoteId, onSelect: select)
+                    if let selectedChatModel {
+                        ConversationsList(modelRemoteId: selectedChatModel.remoteId, onSelect: select)
                     }
                 }
             }
             .environment(\.defaultMinListRowHeight, 2)
         } detail: {
-            if let selectedModel = router.selectedChatModel {
-                ChatDetailView(session: session, model: selectedModel)
-                    .id(selectedModel.remoteId)
+            if let selectedChatModel {
+                ChatDetailView(session: session, model: selectedChatModel)
+                    .id(selectedChatModel.remoteId)
                     .toolbar {
-                        if router.selectedConversationId != nil {
+                        if selectedConversationId != nil {
                             ToolbarItem(placement: .topBarTrailing) {
                                 Button(role: .destructive) {
                                     deleteCurrentConversation()
                                 } label: {
                                     Label("Delete conversation", systemImage: "trash")
                                 }
+                                .disabled(session.isStreaming)
                             }
                         }
                     }
@@ -55,7 +59,6 @@ struct ChatView: View {
             session.modelContext = modelContext
         }
         .onChange(of: session.currentConversationId) { _, newValue in
-            // When ChatSession creates a conversation (first message in New chat), sync the router.
             if router.selectedConversationId != newValue {
                 router.selectedConversationId = newValue
             }
@@ -82,7 +85,7 @@ struct ChatView: View {
     }
 }
 
-private struct ConversationList: View {
+private struct ConversationsList: View {
     @Environment(AppRouter.self) private var router
     @Query private var conversations: [Conversation]
     let onSelect: (Conversation) -> Void
@@ -110,7 +113,7 @@ private struct ConversationList: View {
 private struct ChatDetailView: View {
     @Bindable var session: ChatSession
     let model: DownloadedModel
-    private let scrollTimer = Timer.publish(every: 0.3, on: .main, in: .common).autoconnect()
+    @State private var isNearBottom: Bool = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -137,7 +140,7 @@ private struct ChatDetailView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 12) {
                             ForEach(session.messages) { message in
                                 MessageBubble(message: message)
                                     .id(message.id)
@@ -146,39 +149,40 @@ private struct ChatDetailView: View {
                                 Text(errorMessage)
                                     .font(.caption)
                                     .foregroundStyle(.red)
-                                    .padding(.horizontal)
                             }
                         }
-                        .padding()
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 16)
+                    }
+                    .defaultScrollAnchor(.bottom)
+                    .id(session.currentConversationId)
+                    .onScrollGeometryChange(for: Bool.self) { geo in
+                        let distance = geo.contentSize.height - geo.contentOffset.y - geo.containerSize.height
+                        return distance < 200
+                    } action: { _, newValue in
+                        isNearBottom = newValue
+                    }
+                    .onChange(of: session.messages.last?.content) {
+                        if isNearBottom, let lastId = session.messages.last?.id {
+                            proxy.scrollTo(lastId, anchor: .bottom)
+                        }
                     }
                     .onChange(of: session.messages.count) {
-                        withAnimation {
-                            proxy.scrollTo(session.messages.last?.id, anchor: .bottom)
+                        isNearBottom = true
+                        if let lastId = session.messages.last?.id {
+                            proxy.scrollTo(lastId, anchor: .bottom)
                         }
                     }
-                    .onReceive(scrollTimer) { _ in
-                        if session.messages.last?.isStreaming == true {
-                            proxy.scrollTo(session.messages.last?.id, anchor: .bottom)
+                    .onChange(of: session.isStreaming) { _, newValue in
+                        if !newValue, let last = session.messages.last {
+                            print(last.content)
                         }
                     }
                 }
 
-                HStack {
-                    TextField("Ask something...", text: $session.inputText)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit {
-                            session.sendMessage()
-                        }
-
-                    Button {
-                        session.sendMessage()
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                    }
-                    .disabled(session.inputText.isEmpty || session.isLoading)
+                InputBar(isLoading: session.isStreaming) { question in
+                    session.ask(question)
                 }
-                .padding()
             }
         }
         .frame(minWidth: 400, minHeight: 500)
