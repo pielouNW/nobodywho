@@ -39,11 +39,43 @@ public struct MessageBubble: View {
     }
 
     private var cleanedContent: String {
-        message.content
+        let stripped = message.content
             .replacingOccurrences(of: "<think>[\\s\\S]*?</think>", with: "", options: .regularExpression)
             .replacingOccurrences(of: "<think>", with: "")
             .replacingOccurrences(of: "</think>", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isStreaming ? Self.stabilizeStreamingMarkdown(stripped) : stripped
+    }
+
+    private static func stabilizeStreamingMarkdown(_ input: String) -> String {
+        var lines = input.components(separatedBy: "\n")
+        while let last = lines.last {
+            let trimmed = last.trimmingCharacters(in: .whitespaces)
+            if isDanglingBlockMarker(trimmed) {
+                lines.removeLast()
+            } else {
+                break
+            }
+        }
+        var result = lines.joined(separator: "\n")
+        if !(result.components(separatedBy: "```").count - 1).isMultiple(of: 2) {
+            result += "\n```"
+        }
+        if !(result.components(separatedBy: "~~~").count - 1).isMultiple(of: 2) {
+            result += "\n~~~"
+        }
+        return result
+    }
+
+    private static func isDanglingBlockMarker(_ line: String) -> Bool {
+        if line.isEmpty { return true }
+        if line == "-" || line == "*" || line == "+" || line == ">" || line == "|" { return true }
+        if line.range(of: #"^[-*+]\s*\[[ xX]?\]?$"#, options: .regularExpression) != nil { return true }
+        if line.range(of: #"^[-=*_](?:\s*[-=*_])*$"#, options: .regularExpression) != nil { return true }
+        if line.range(of: #"^\d+[.)]$"#, options: .regularExpression) != nil { return true }
+        if line.range(of: #"^#+$"#, options: .regularExpression) != nil { return true }
+        if line.range(of: #"^\|[\s\-:|]*$"#, options: .regularExpression) != nil { return true }
+        return false
     }
 
     public var body: some View {
