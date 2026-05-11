@@ -155,7 +155,6 @@ private struct ChatDetailView: View {
                         .padding(.horizontal, 16)
                     }
                     .defaultScrollAnchor(.bottom)
-                    .id(session.currentConversationId)
                     .onScrollGeometryChange(for: Bool.self) { geo in
                         let distance = geo.contentSize.height - geo.contentOffset.y - geo.containerSize.height
                         return distance < 200

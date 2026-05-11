@@ -13,13 +13,13 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.1"),
+        .package(path: "../LLMStream"),
     ],
     targets: [
         .target(
             name: "ValkyrieUI",
             dependencies: [
-                .product(name: "Textual", package: "textual"),
+                .product(name: "LLMStream", package: "LLMStream"),
             ],
             path: "Sources/ValkyrieUI"
         ),

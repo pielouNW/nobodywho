@@ -4,7 +4,7 @@
 //
 
 import SwiftUI
-import Textual
+import LLMStream
 
 public struct ChatMessage: Identifiable {
     public let id: UUID
@@ -114,12 +114,12 @@ public struct MessageBubble: View {
                 if isUser { Spacer() }
 
                 HStack(alignment: .bottom, spacing: 2) {
-                    if message.isStreaming && message.content.isEmpty {
-                        TypingIndicator()
-                    } else if isUser {
+                    if isUser {
                         Text(cleanedContent)
+                    } else if message.isStreaming && message.content.isEmpty {
+                        TypingIndicator()
                     } else {
-                        StructuredText(markdown: cleanedContent)
+                        StreamingContent(cleanedContent, isStreaming: message.isStreaming)
                     }
                 }
                 .padding(12)
