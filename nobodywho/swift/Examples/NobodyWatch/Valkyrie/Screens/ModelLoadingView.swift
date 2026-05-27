@@ -15,7 +15,7 @@ struct ModelLoadingView: View {
     var body: some View {
         Group {
             if session.modelLoaded {
-                ChatsView(session: session)
+                ChatView(session: session)
             } else {
                 LoadingView(hasError: session.errorLoadingModel, errorMessage: "Failed to load model. Please try again.") {
                     session.loadModel(path: modelPath)

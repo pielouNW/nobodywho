@@ -1,10 +1,6 @@
-//
-//  ChatView.swift
-//  NobodyWatch Watch App
-//
-
-import ValkyrieUI
+import Combine
 import SwiftUI
+import ValkyrieUI
 
 struct ChatView: View {
     @Bindable var session: ChatSession
@@ -72,4 +68,15 @@ struct ChatView: View {
             .padding(.vertical, 4)
         }
     }
+}
+
+#Preview {
+    let session = ChatSession()
+    session.messages = [
+        ChatMessage(role: .user, content: "What is Swift?"),
+        ChatMessage(role: .assistant, content: "Swift is a modern programming language created by Apple.", thinking: "The user is asking about the Swift programming language."),
+        ChatMessage(role: .user, content: "Tell me more"),
+        ChatMessage(role: .assistant, content: "It's used for iOS, macOS, and watchOS development...", isStreaming: true),
+    ]
+    return ChatView(session: session)
 }

@@ -52,7 +52,7 @@ public struct MessageBubble: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(message.role == .user ? Color.blue : Color.gray.opacity(0.3))
+                .background(message.role == .user ? Color.clear : Color.gray.opacity(0.3))
                 .foregroundStyle(message.role == .user ? .white : .primary)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
